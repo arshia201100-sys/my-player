@@ -3,6 +3,10 @@
 on:
   workflow_dispatch:
 
+env:
+  CI: true
+  EXPO_NO_TELEMETRY: 1
+
 jobs:
   build:
     runs-on: macos-15
@@ -28,6 +32,22 @@ jobs:
       - name: Generate Native iOS Project (Clean)
         run: npx expo prebuild --platform ios --no-install --clean
 
+      - name: Inject Node & NPX into Xcode (Brute Force Fix)
+        run: |
+          cd ios
+          NODE_BIN=$(which node)
+          NODE_DIR=$(dirname $NODE_BIN)
+          
+          # تزریق اجباری و عمیق مسیر Node به مغز Xcode
+          echo "export PATH=\"$NODE_DIR:\$PATH\"" > .xcode.env
+          echo "export NODE_BINARY=$NODE_BIN" >> .xcode.env
+          cp .xcode.env .xcode.env.local
+          
+          # دور زدن محدودیت‌های امنیتی گیت‌هاب با لینک مستقیم
+          sudo ln -sf $NODE_BIN /usr/local/bin/node
+          sudo ln -sf $(which npx) /usr/local/bin/npx
+          sudo ln -sf $(which npm) /usr/local/bin/npm
+
       - name: Install CocoaPods
         run: |
           cd ios
@@ -36,20 +56,6 @@ jobs:
       - name: Build Unsigned App
         run: |
           cd ios
-          
-          # 1. تزریق اجباری مسیر Node.js به تمام فایل‌های سیستمی Xcode
-          sudo ln -sf $(which node) /usr/local/bin/node || true
-          echo "export NODE_BINARY=$(which node)" > .xcode.env
-          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
-          
-          # 2. خاموش کردن اجباری سیستم امنیتی امضای اپل در تمام زیر-اسکریپت‌ها
-          export CODE_SIGNING_ALLOWED="NO"
-          export CODE_SIGNING_REQUIRED="NO"
-          export CODE_SIGN_IDENTITY=""
-          export PROVISIONING_PROFILE=""
-          export PROVISIONING_PROFILE_SPECIFIER=""
-          
-          # 3. اجرای کامپایل
           xcodebuild build \
             -workspace *.xcworkspace \
             -scheme $(ls -d *.xcodeproj | sed 's/\.xcodeproj//') \
@@ -61,8 +67,9 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
             CONFIGURATION_BUILD_DIR=build
-            
+
       - name: Package to IPA
         run: |
           cd ios/build
