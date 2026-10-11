@@ -32,6 +32,13 @@ jobs:
       - name: Generate Native iOS Project (Clean)
         run: npx expo prebuild --platform ios --no-install --clean
 
+      - name: Setup Node Path
+        run: |
+          cd ios
+          echo "export NODE_BINARY=$(which node)" > .xcode.env
+          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
+          sudo ln -sf $(which node) /usr/local/bin/node || true
+
       - name: Install CocoaPods
         run: |
           cd ios
@@ -40,14 +47,6 @@ jobs:
       - name: Build Unsigned App
         run: |
           cd ios
-          
-          # تنظیم دقیق مسیر Node.js
-          echo "export NODE_BINARY=$(which node)" > .xcode.env
-          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
-          
-          # گرفتن آدرس مطلق پروژه برای جلوگیری از گم شدن مسیر در اسکریپت‌های Expo
-          OUTPUT_DIR="$(pwd)/build"
-          
           xcodebuild build \
             -workspace *.xcworkspace \
             -scheme $(ls -d *.xcodeproj | sed 's/\.xcodeproj//') \
@@ -60,7 +59,8 @@ jobs:
             PROVISIONING_PROFILE="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
             COMPILER_INDEX_STORE_ENABLE=NO \
-            CONFIGURATION_BUILD_DIR="$OUTPUT_DIR"
+            ENABLE_USER_SCRIPT_SANDBOXING=NO \
+            CONFIGURATION_BUILD_DIR="$(pwd)/build"
 
       - name: Package to IPA
         run: |
