@@ -21,12 +21,12 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Generate Native iOS Project
-        run: npx expo prebuild --platform ios
+        run: npx expo prebuild --platform ios --no-install
 
       - name: Install CocoaPods
         run: |
           cd ios
-          pod install
+          pod install --repo-update
 
       - name: Build Unsigned App
         run: |
