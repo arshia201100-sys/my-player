@@ -25,14 +25,8 @@ jobs:
       - name: Install Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Generate Native iOS Project
-        run: npx expo prebuild --platform ios --no-install
-
-      - name: Setup Node Path for Xcode
-        run: |
-          cd ios
-          echo "export NODE_BINARY=$(command -v node)" > .xcode.env.local
-          sudo ln -s $(command -v node) /usr/local/bin/node || true
+      - name: Generate Native iOS Project (Clean)
+        run: npx expo prebuild --platform ios --no-install --clean
 
       - name: Install CocoaPods
         run: |
@@ -42,17 +36,33 @@ jobs:
       - name: Build Unsigned App
         run: |
           cd ios
+          
+          # 1. تزریق اجباری مسیر Node.js به تمام فایل‌های سیستمی Xcode
+          sudo ln -sf $(which node) /usr/local/bin/node || true
+          echo "export NODE_BINARY=$(which node)" > .xcode.env
+          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
+          
+          # 2. خاموش کردن اجباری سیستم امنیتی امضای اپل در تمام زیر-اسکریپت‌ها
+          export CODE_SIGNING_ALLOWED="NO"
+          export CODE_SIGNING_REQUIRED="NO"
+          export CODE_SIGN_IDENTITY=""
+          export PROVISIONING_PROFILE=""
+          export PROVISIONING_PROFILE_SPECIFIER=""
+          
+          # 3. اجرای کامپایل
           xcodebuild build \
             -workspace *.xcworkspace \
             -scheme $(ls -d *.xcodeproj | sed 's/\.xcodeproj//') \
             -configuration Release \
+            -sdk iphoneos \
             -destination "generic/platform=iOS" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED="NO" \
+            CODE_SIGNING_REQUIRED="NO" \
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
             CONFIGURATION_BUILD_DIR=build
-
+            
       - name: Package to IPA
         run: |
           cd ios/build
