@@ -32,22 +32,6 @@ jobs:
       - name: Generate Native iOS Project (Clean)
         run: npx expo prebuild --platform ios --no-install --clean
 
-      - name: Inject Node & NPX into Xcode (Brute Force Fix)
-        run: |
-          cd ios
-          NODE_BIN=$(which node)
-          NODE_DIR=$(dirname $NODE_BIN)
-          
-          # تزریق اجباری و عمیق مسیر Node به مغز Xcode
-          echo "export PATH=\"$NODE_DIR:\$PATH\"" > .xcode.env
-          echo "export NODE_BINARY=$NODE_BIN" >> .xcode.env
-          cp .xcode.env .xcode.env.local
-          
-          # دور زدن محدودیت‌های امنیتی گیت‌هاب با لینک مستقیم
-          sudo ln -sf $NODE_BIN /usr/local/bin/node
-          sudo ln -sf $(which npx) /usr/local/bin/npx
-          sudo ln -sf $(which npm) /usr/local/bin/npm
-
       - name: Install CocoaPods
         run: |
           cd ios
@@ -56,6 +40,14 @@ jobs:
       - name: Build Unsigned App
         run: |
           cd ios
+          
+          # تنظیم دقیق مسیر Node.js
+          echo "export NODE_BINARY=$(which node)" > .xcode.env
+          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
+          
+          # گرفتن آدرس مطلق پروژه برای جلوگیری از گم شدن مسیر در اسکریپت‌های Expo
+          OUTPUT_DIR="$(pwd)/build"
+          
           xcodebuild build \
             -workspace *.xcworkspace \
             -scheme $(ls -d *.xcodeproj | sed 's/\.xcodeproj//') \
@@ -68,7 +60,7 @@ jobs:
             PROVISIONING_PROFILE="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
             COMPILER_INDEX_STORE_ENABLE=NO \
-            CONFIGURATION_BUILD_DIR=build
+            CONFIGURATION_BUILD_DIR="$OUTPUT_DIR"
 
       - name: Package to IPA
         run: |
