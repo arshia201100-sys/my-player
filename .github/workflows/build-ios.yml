@@ -3,10 +3,6 @@
 on:
   workflow_dispatch:
 
-env:
-  CI: true
-  EXPO_NO_TELEMETRY: 1
-
 jobs:
   build:
     runs-on: macos-15
@@ -37,7 +33,6 @@ jobs:
           cd ios
           echo "export NODE_BINARY=$(which node)" > .xcode.env
           echo "export NODE_BINARY=$(which node)" > .xcode.env.local
-          sudo ln -sf $(which node) /usr/local/bin/node || true
 
       - name: Install CocoaPods
         run: |
@@ -53,24 +48,26 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -destination "generic/platform=iOS" \
+            -derivedDataPath derivedData \
             CODE_SIGNING_ALLOWED="NO" \
             CODE_SIGNING_REQUIRED="NO" \
+            CODE_SIGNING_V2_ALLOWED="NO" \
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
-            COMPILER_INDEX_STORE_ENABLE=NO \
             ENABLE_USER_SCRIPT_SANDBOXING=NO \
-            CONFIGURATION_BUILD_DIR="$(pwd)/build"
+            COMPILER_INDEX_STORE_ENABLE=NO
 
       - name: Package to IPA
         run: |
-          cd ios/build
+          cd ios
           mkdir -p Payload
-          cp -r *.app Payload/
+          # کپی کردن برنامه از پوشه استاندارد به جای مسیر دستی
+          cp -r derivedData/Build/Products/Release-iphoneos/*.app Payload/
           zip -r RemotePlayer.ipa Payload
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: RemotePlayer-iOS
-          path: ios/build/RemotePlayer.ipa
+          path: ios/RemotePlayer.ipa
