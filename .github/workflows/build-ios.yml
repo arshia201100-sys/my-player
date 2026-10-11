@@ -28,6 +28,12 @@ jobs:
       - name: Generate Native iOS Project
         run: npx expo prebuild --platform ios --no-install
 
+      - name: Setup Node Path for Xcode
+        run: |
+          cd ios
+          echo "export NODE_BINARY=$(command -v node)" > .xcode.env.local
+          sudo ln -s $(command -v node) /usr/local/bin/node || true
+
       - name: Install CocoaPods
         run: |
           cd ios
