@@ -34,13 +34,21 @@ jobs:
       - name: Generate Native iOS Project (Clean)
         run: npx expo prebuild --platform ios --no-install --clean
 
-      - name: Configure Xcode Environment
+      - name: Inject Node into Xcode ENV
         run: |
           cd ios
-          # تزریق آدرس مطلق نود برای اسکریپت‌های داخلی
-          echo "export NODE_BINARY=/usr/local/bin/node" > .xcode.env.local
-          # خاموش کردن سندباکس در هسته مک
-          defaults write com.apple.dt.Xcode IDEEnableUserScriptSandboxing -bool NO
+          echo "export NODE_BINARY=$(which node)" > .xcode.env
+          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
+
+      - name: Hijack xcodebuild (The Ultimate Bypass)
+        run: |
+          mkdir -p $HOME/custom_bin
+          cat << 'EOF' > $HOME/custom_bin/xcodebuild
+          #!/bin/bash
+          /usr/bin/xcodebuild "$@" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" PROVISIONING_PROFILE="" PROVISIONING_PROFILE_SPECIFIER="" ENABLE_USER_SCRIPT_SANDBOXING=NO COMPILER_INDEX_STORE_ENABLE=NO
+          EOF
+          chmod +x $HOME/custom_bin/xcodebuild
+          echo "$HOME/custom_bin" >> $GITHUB_PATH
 
       - name: Install CocoaPods
         run: |
@@ -50,24 +58,13 @@ jobs:
       - name: Build Unsigned App
         run: |
           cd ios
-          
-          # ایجاد فایل کانفیگ برای اعمال بدون خطرِ تنظیمات ساین
-          cat << 'EOF' > unsigned.xcconfig
-          CODE_SIGN_IDENTITY =
-          CODE_SIGNING_REQUIRED = NO
-          CODE_SIGNING_ALLOWED = NO
-          EOF
-          
           xcodebuild build \
             -workspace *.xcworkspace \
             -scheme $(ls -d *.xcodeproj | sed 's/\.xcodeproj//') \
             -configuration Release \
             -sdk iphoneos \
             -destination "generic/platform=iOS" \
-            -xcconfig unsigned.xcconfig \
-            -derivedDataPath derivedData \
-            ENABLE_USER_SCRIPT_SANDBOXING=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO
+            -derivedDataPath derivedData
 
       - name: Package to IPA
         run: |
