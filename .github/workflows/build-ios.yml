@@ -25,14 +25,22 @@ jobs:
       - name: Install Dependencies
         run: npm install --legacy-peer-deps
 
+      - name: Setup Global Node Paths
+        run: |
+          sudo ln -sf $(which node) /usr/local/bin/node
+          sudo ln -sf $(which npm) /usr/local/bin/npm
+          sudo ln -sf $(which npx) /usr/local/bin/npx
+
       - name: Generate Native iOS Project (Clean)
         run: npx expo prebuild --platform ios --no-install --clean
 
-      - name: Setup Node Path
+      - name: Configure Xcode Environment
         run: |
           cd ios
-          echo "export NODE_BINARY=$(which node)" > .xcode.env
-          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
+          # تزریق آدرس مطلق نود برای اسکریپت‌های داخلی
+          echo "export NODE_BINARY=/usr/local/bin/node" > .xcode.env.local
+          # خاموش کردن سندباکس در هسته مک
+          defaults write com.apple.dt.Xcode IDEEnableUserScriptSandboxing -bool NO
 
       - name: Install CocoaPods
         run: |
@@ -42,19 +50,22 @@ jobs:
       - name: Build Unsigned App
         run: |
           cd ios
+          
+          # ایجاد فایل کانفیگ برای اعمال بدون خطرِ تنظیمات ساین
+          cat << 'EOF' > unsigned.xcconfig
+          CODE_SIGN_IDENTITY =
+          CODE_SIGNING_REQUIRED = NO
+          CODE_SIGNING_ALLOWED = NO
+          EOF
+          
           xcodebuild build \
             -workspace *.xcworkspace \
             -scheme $(ls -d *.xcodeproj | sed 's/\.xcodeproj//') \
             -configuration Release \
             -sdk iphoneos \
             -destination "generic/platform=iOS" \
+            -xcconfig unsigned.xcconfig \
             -derivedDataPath derivedData \
-            CODE_SIGNING_ALLOWED="NO" \
-            CODE_SIGNING_REQUIRED="NO" \
-            CODE_SIGNING_V2_ALLOWED="NO" \
-            CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE="" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
             ENABLE_USER_SCRIPT_SANDBOXING=NO \
             COMPILER_INDEX_STORE_ENABLE=NO
 
@@ -62,7 +73,6 @@ jobs:
         run: |
           cd ios
           mkdir -p Payload
-          # کپی کردن برنامه از پوشه استاندارد به جای مسیر دستی
           cp -r derivedData/Build/Products/Release-iphoneos/*.app Payload/
           zip -r RemotePlayer.ipa Payload
 
