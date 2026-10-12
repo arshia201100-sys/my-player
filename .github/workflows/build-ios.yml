@@ -1,4 +1,4 @@
-﻿name: Build Unsigned IPA
+﻿name: Build Signed iOS IPA
 
 on:
   workflow_dispatch:
@@ -18,48 +18,46 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install NPM
+      - name: Install NPM Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Prebuild iOS
-        run: npx expo prebuild --platform ios --no-install
-
-      - name: Fix Node for Expo Scripts
+      - name: Install Apple Certificate and Provisioning Profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: "ci-password"
         run: |
-          cd ios
-          echo "export NODE_BINARY=$(which node)" > .xcode.env
-          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
-          sudo ln -sf $(which node) /usr/local/bin/node
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # دیکد کردن فایل‌ها از سیکرت‌های گیت‌هاب
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+          # ساخت یک کی‌چین موقت در سرور مک برای ساین کردن
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # ایمپورت کردن سرتیفیکیت
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          
+          # نصب پرویژن پروفایل
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+      - name: Generate Native iOS Project
+        run: npx expo prebuild --platform ios --no-install
 
       - name: Install CocoaPods
         run: |
           cd ios
           pod install --repo-update
 
-      - name: Nuke Code Signing via Ruby
-        run: |
-          cd ios
-          cat << 'EOF' > nuke_signing.rb
-          require 'xcodeproj'
-          def disable_signing(project_path)
-            return unless File.exist?(project_path)
-            project = Xcodeproj::Project.open(project_path)
-            project.targets.each do |target|
-              target.build_configurations.each do |config|
-                config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
-                config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
-                config.build_settings['CODE_SIGN_IDENTITY'] = ''
-                config.build_settings['EXPANDED_CODE_SIGN_IDENTITY'] = ''
-              end
-            end
-            project.save
-          end
-          disable_signing(Dir.glob("*.xcodeproj").first)
-          disable_signing("Pods/Pods.xcodeproj")
-          EOF
-          ruby nuke_signing.rb
-
-      - name: Build Unsigned App
+      - name: Build Signed App
         run: |
           cd ios
           xcodebuild build \
@@ -68,19 +66,17 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -destination "generic/platform=iOS" \
-            -derivedDataPath derivedData \
-            ENABLE_USER_SCRIPT_SANDBOXING=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO
+            CONFIGURATION_BUILD_DIR="$(pwd)/build"
 
       - name: Package to IPA
         run: |
-          cd ios
+          cd ios/build
           mkdir -p Payload
-          cp -r derivedData/Build/Products/Release-iphoneos/*.app Payload/
+          cp -r *.app Payload/
           zip -q -r my-player.ipa Payload
 
-      - name: Upload IPA
+      - name: Upload Signed IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Unsigned-IPA
-          path: ios/my-player.ipa
+          name: Signed-IPA
+          path: ios/build/my-player.ipa
