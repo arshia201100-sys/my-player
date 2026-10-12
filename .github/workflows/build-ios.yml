@@ -24,7 +24,6 @@ jobs:
       - name: Install Apple Certificate and Provisioning Profile
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.P12_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
           BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: "ci-password"
         run: |
@@ -32,17 +31,17 @@ jobs:
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # پاک کردن اسپیس و اینترهای اضافی و دیکد کردن فایل‌ها
-          echo "$BUILD_CERTIFICATE_BASE64" | tr -d '\n\r ' | base64 --decode -o $CERTIFICATE_PATH
-          echo "$BUILD_PROVISION_PROFILE_BASE64" | tr -d '\n\r ' | base64 --decode -o $PP_PATH
+          # دیکد کردن امن فایل‌ها 
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
 
-          # ساخت یک کی‌چین موقت در سرور مک برای ساین کردن
+          # ساخت کی‌چین موقت
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-          # ایمپورت کردن سرتیفیکیت
-          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          # ایمپورت سرتیفیکیت با پسورد 1 (هاردکد شده)
+          security import $CERTIFICATE_PATH -P "1" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           
           # نصب پرویژن پروفایل
