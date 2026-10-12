@@ -27,20 +27,20 @@ jobs:
           BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: "ci-password"
         run: |
-          export CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          export PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
-          export KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # استفاده از پایتون برای دیکد کردن ۱۰۰٪ امن (بدون حساسیت به کاراکترهای نامرئی ویندوز)
-          python3 -c "import base64, os; open(os.environ['CERTIFICATE_PATH'], 'wb').write(base64.b64decode(os.environ['BUILD_CERTIFICATE_BASE64']))"
-          python3 -c "import base64, os; open(os.environ['PP_PATH'], 'wb').write(base64.b64decode(os.environ['BUILD_PROVISION_PROFILE_BASE64']))"
+          # دیکد کردن فایل‌های تمیز شده
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
 
           # ساخت کی‌چین موقت
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-          # ایمپورت سرتیفیکیت با پسورد 1 
+          # ایمپورت سرتیفیکیت
           security import $CERTIFICATE_PATH -P "1" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           
