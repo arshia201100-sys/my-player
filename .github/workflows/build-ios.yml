@@ -33,7 +33,7 @@ jobs:
         env:
           KEYCHAIN_PASSWORD: "ci-password"
         run: |
-          # خارج کردن فایل‌ها از زیپ (مصون از دستکاری گیت ویندوز)
+          # استخراج زیپ تمیز
           unzip certs.zip -d cert_files
           
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
@@ -43,17 +43,13 @@ jobs:
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-          # پیدا کردن خودکار فایل‌ها با هر اسمی که داخل زیپ دارن
-          CERT_FILE=$(find cert_files -name "*.p12" | head -n 1)
-          PROV_FILE=$(find cert_files -name "*.mobileprovision" | head -n 1)
-
-          # ایمپورت سرتیفیکیت سالم با پسورد 1
-          security import "$CERT_FILE" -P "1" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          # نصب دقیق فایل‌ها با مسیری که خودمون ساختیم
+          security import cert_files/cert.p12 -P "1" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           
           # نصب پرویژن پروفایل
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp "$PROV_FILE" ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp cert_files/prov.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Build Signed App
         run: |
