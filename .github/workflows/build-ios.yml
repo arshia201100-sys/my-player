@@ -32,9 +32,9 @@ jobs:
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # دیکد کردن فایل‌ها از سیکرت‌های گیت‌هاب
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+          # پاک کردن اسپیس و اینترهای اضافی و دیکد کردن فایل‌ها
+          echo "$BUILD_CERTIFICATE_BASE64" | tr -d '\n\r ' | base64 --decode -o $CERTIFICATE_PATH
+          echo "$BUILD_PROVISION_PROFILE_BASE64" | tr -d '\n\r ' | base64 --decode -o $PP_PATH
 
           # ساخت یک کی‌چین موقت در سرور مک برای ساین کردن
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
