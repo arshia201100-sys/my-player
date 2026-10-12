@@ -24,17 +24,23 @@ jobs:
       - name: Prebuild iOS
         run: npx expo prebuild --platform ios --no-install
 
+      - name: Fix Node for Expo Scripts
+        run: |
+          cd ios
+          echo "export NODE_BINARY=$(which node)" > .xcode.env
+          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
+          sudo ln -sf $(which node) /usr/local/bin/node
+
       - name: Install CocoaPods
         run: |
           cd ios
           pod install --repo-update
 
-      - name: Nuke Code Signing via Ruby (Direct pbxproj modifier)
+      - name: Nuke Code Signing via Ruby
         run: |
           cd ios
           cat << 'EOF' > nuke_signing.rb
           require 'xcodeproj'
-          
           def disable_signing(project_path)
             return unless File.exist?(project_path)
             project = Xcodeproj::Project.open(project_path)
@@ -47,10 +53,7 @@ jobs:
               end
             end
             project.save
-            puts "Nuked signing for #{project_path}"
           end
-
-          # حذف ساین از پروژه اصلی و پروژه پادها
           disable_signing(Dir.glob("*.xcodeproj").first)
           disable_signing("Pods/Pods.xcodeproj")
           EOF
@@ -65,19 +68,19 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -destination "generic/platform=iOS" \
+            -derivedDataPath derivedData \
             ENABLE_USER_SCRIPT_SANDBOXING=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            CONFIGURATION_BUILD_DIR="$(pwd)/build"
+            COMPILER_INDEX_STORE_ENABLE=NO
 
       - name: Package to IPA
         run: |
-          cd ios/build
+          cd ios
           mkdir -p Payload
-          cp -r *.app Payload/
+          cp -r derivedData/Build/Products/Release-iphoneos/*.app Payload/
           zip -q -r my-player.ipa Payload
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: Unsigned-IPA
-          path: ios/build/my-player.ipa
+          path: ios/my-player.ipa
