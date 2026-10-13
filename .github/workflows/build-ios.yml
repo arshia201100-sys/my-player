@@ -1,4 +1,4 @@
-﻿name: Build Signed iOS IPA
+﻿name: Build Unsigned iOS IPA (Like Video)
 
 on:
   workflow_dispatch:
@@ -29,29 +29,30 @@ jobs:
           cd ios
           pod install --repo-update
 
-      - name: Unzip and Install Apple Certificates
-        env:
-          KEYCHAIN_PASSWORD: "ci-password"
+      - name: Surgically Disable Code Signing (Bypass Apple)
         run: |
-          # استخراج زیپ تمیز
-          unzip certs.zip -d cert_files
-          
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          cd ios
+          cat << 'EOF' > nuke_signing.rb
+          require 'xcodeproj'
+          def disable_signing(project_path)
+            return unless File.exist?(project_path)
+            project = Xcodeproj::Project.open(project_path)
+            project.targets.each do |target|
+              target.build_configurations.each do |config|
+                config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+                config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+                config.build_settings['CODE_SIGN_IDENTITY'] = ''
+                config.build_settings['EXPANDED_CODE_SIGN_IDENTITY'] = ''
+              end
+            end
+            project.save
+          end
+          disable_signing(Dir.glob("*.xcodeproj").first)
+          disable_signing("Pods/Pods.xcodeproj")
+          EOF
+          ruby nuke_signing.rb
 
-          # ساخت کی‌چین موقت
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          # نصب دقیق فایل‌ها با مسیری که خودمون ساختیم
-          security import cert_files/cert.p12 -P "1" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          
-          # نصب پرویژن پروفایل
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp cert_files/prov.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
-
-      - name: Build Signed App
+      - name: Build Unsigned App
         run: |
           cd ios
           xcodebuild build \
@@ -60,17 +61,19 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -destination "generic/platform=iOS" \
-            CONFIGURATION_BUILD_DIR="$(pwd)/build"
+            -derivedDataPath derivedData \
+            ENABLE_USER_SCRIPT_SANDBOXING=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO
 
       - name: Package to IPA
         run: |
-          cd ios/build
+          cd ios
           mkdir -p Payload
-          cp -r *.app Payload/
+          cp -r derivedData/Build/Products/Release-iphoneos/*.app Payload/
           zip -q -r my-player.ipa Payload
 
-      - name: Upload Signed IPA Artifact
+      - name: Upload Unsigned IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Signed-IPA
-          path: ios/build/my-player.ipa
+          name: Unsigned-IPA
+          path: ios/my-player.ipa
