@@ -1,4 +1,4 @@
-﻿name: Build Unsigned iOS IPA (Flutter Video Style)
+﻿name: Build Unsigned iOS IPA (Deep Debugged)
 
 on:
   workflow_dispatch:
@@ -21,24 +21,51 @@ jobs:
       - name: Install NPM Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Generate Native iOS Project
+      - name: Prebuild iOS Project
         run: npx expo prebuild --platform ios --no-install
 
-      - name: Setup Node for Xcode
+      - name: Bulletproof Node.js Paths for Xcode
         run: |
+          # میخ کردن مسیر نود در ریشه سیستم مک تا هیچ اسکریپتی کرش نکند
+          sudo ln -sf $(which node) /usr/local/bin/node
+          sudo ln -sf $(which npm) /usr/local/bin/npm
+          sudo ln -sf $(which npx) /usr/local/bin/npx
           cd ios
-          echo "export NODE_BINARY=$(which node)" > .xcode.env
-          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
+          echo "export NODE_BINARY=/usr/local/bin/node" > .xcode.env
+          echo "export NODE_BINARY=/usr/local/bin/node" > .xcode.env.local
 
       - name: Install CocoaPods
         run: |
           cd ios
           pod install --repo-update
 
-      - name: Build Unsigned App (Forcing Node & Bypassing Apple)
+      - name: Surgically Disable Code Signing (Ad-Hoc Fallback)
         run: |
           cd ios
-          # تزریق مستقیم مسیر Node و خام کردن ساین در خود دستور بیلد
+          cat << 'EOF' > nuke_signing.rb
+          require 'xcodeproj'
+          def disable_signing(project_path)
+            return unless File.exist?(project_path)
+            project = Xcodeproj::Project.open(project_path)
+            project.targets.each do |target|
+              target.build_configurations.each do |config|
+                # استفاده از امضای موقت Ad-Hoc (-) برای گول زدن کامپایلر JSI
+                config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+                config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+                config.build_settings['CODE_SIGN_IDENTITY'] = '-'
+                config.build_settings['EXPANDED_CODE_SIGN_IDENTITY'] = '-'
+              end
+            end
+            project.save
+          end
+          disable_signing(Dir.glob("*.xcodeproj").first)
+          disable_signing("Pods/Pods.xcodeproj")
+          EOF
+          ruby nuke_signing.rb
+
+      - name: Build Unsigned App
+        run: |
+          cd ios
           xcodebuild build \
             -workspace *.xcworkspace \
             -scheme $(ls -d *.xcodeproj | sed 's/\.xcodeproj//') \
@@ -48,13 +75,19 @@ jobs:
             -derivedDataPath derivedData \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            EXPANDED_CODE_SIGN_IDENTITY="" \
-            NODE_BINARY=$(which node) \
+            CODE_SIGN_IDENTITY="-" \
+            NODE_BINARY=/usr/local/bin/node \
             ENABLE_USER_SCRIPT_SANDBOXING=NO \
             COMPILER_INDEX_STORE_ENABLE=NO
 
+      - name: Dump Error Logs on Failure
+        if: failure()
+        run: |
+          echo "=== IF IT FAILS AGAIN, THIS WILL SHOW THE EXACT REASON ==="
+          find ios/derivedData -name "*.log" -exec tail -n 100 {} + || true
+
       - name: Package to IPA
+        if: success()
         run: |
           cd ios
           mkdir -p Payload
@@ -62,6 +95,7 @@ jobs:
           zip -q -r my-player.ipa Payload
 
       - name: Upload Unsigned IPA
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: Unsigned-IPA
