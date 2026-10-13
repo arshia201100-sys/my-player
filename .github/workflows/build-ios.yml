@@ -1,4 +1,4 @@
-﻿name: Build Unsigned iOS IPA (Like Video)
+﻿name: Build Unsigned iOS IPA (Expo Fixed)
 
 on:
   workflow_dispatch:
@@ -24,12 +24,19 @@ jobs:
       - name: Generate Native iOS Project
         run: npx expo prebuild --platform ios --no-install
 
+      - name: Fix Node Path for Expo Scripts
+        run: |
+          cd ios
+          echo "export NODE_BINARY=$(which node)" > .xcode.env
+          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
+          sudo ln -sf $(which node) /usr/local/bin/node
+
       - name: Install CocoaPods
         run: |
           cd ios
           pod install --repo-update
 
-      - name: Surgically Disable Code Signing (Bypass Apple)
+      - name: Surgically Disable Code Signing
         run: |
           cd ios
           cat << 'EOF' > nuke_signing.rb
