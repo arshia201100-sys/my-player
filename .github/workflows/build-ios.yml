@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
@@ -19,7 +19,11 @@ jobs:
         run: npm install
 
       - name: Generate native iOS project
-        run: npx expo prebuild --platform ios
+        run: |
+          npx expo prebuild --platform ios
+          cd ios
+          echo "export NODE_BINARY=$(which node)" > .xcode.env.local
+          sudo ln -sf $(which node) /usr/local/bin/node
 
       - name: Build (no code signing)
         run: |
@@ -35,6 +39,8 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
+            ENABLE_USER_SCRIPT_SANDBOXING=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
             build
 
       - name: Package IPA
