@@ -1,101 +1,57 @@
 name: Build unsigned iOS IPA
 
-
-
 on:
-
   workflow_dispatch:   # دستی از تب Actions اجرا می‌شود
-
   push:
-
     branches: [main]
 
-
-
 jobs:
-
   build:
-
     runs-on: macos-latest
-
     steps:
-
       - uses: actions/checkout@v4
 
-
-
       - uses: actions/setup-node@v4
-
         with:
-
           node-version: 20
 
-
-
       - name: Install JS dependencies
-
         run: npm install
 
-
-
       - name: Generate native iOS project
-
         run: npx expo prebuild --platform ios
 
-
-
       - name: Build (no code signing)
-
         run: |
-
           cd ios
-
+          export NODE_BINARY=$(which node)
+          
+          # تزریق کدی که ساینینگ را از هسته پروژه برای Xcode 16 خاموش می‌کند
+          ruby -e "require 'xcodeproj'; p = Xcodeproj::Project.open(Dir.glob('*.xcodeproj').first); p.targets.each { |t| t.build_configurations.each { |c| c.build_settings['CODE_SIGNING_ALLOWED']='NO'; c.build_settings['CODE_SIGNING_REQUIRED']='NO'; c.build_settings['CODE_SIGN_IDENTITY']=''; c.build_settings['DEVELOPMENT_TEAM']='' } }; p.save"
+          
           WORKSPACE=$(ls -d *.xcworkspace | head -n1)
-
           SCHEME="${WORKSPACE%.xcworkspace}"
-
           xcodebuild \
-
             -workspace "$WORKSPACE" \
-
             -scheme "$SCHEME" \
-
             -configuration Release \
-
             -sdk iphoneos \
-
             -derivedDataPath build \
-
             CODE_SIGNING_ALLOWED=NO \
-
             CODE_SIGNING_REQUIRED=NO \
-
             CODE_SIGN_IDENTITY="" \
-
+            ENABLE_USER_SCRIPT_SANDBOXING=NO \
             build
 
-
-
       - name: Package IPA
-
         run: |
-
           APP=$(find ios/build/Build/Products/Release-iphoneos -maxdepth 1 -name "*.app" | head -n1)
-
           echo "Found app: $APP"
-
           mkdir -p Payload
-
           cp -R "$APP" Payload/
-
           zip -qry AshiPlayer.ipa Payload
 
-
-
       - uses: actions/upload-artifact@v4
-
         with:
-
           name: AshiPlayer-ipa
-
           path: AshiPlayer.ipa
