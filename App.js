@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)',
     padding: 12, borderRadius: 20, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)'
   },
-غ  archiveIconBox: {
+  archiveIconBox: {
     width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,42,84,0.8)',
     justifyContent: 'center', alignItems: 'center'
   },
