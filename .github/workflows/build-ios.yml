@@ -20,10 +20,12 @@ jobs:
 
       - name: Generate native iOS project
         run: |
-          npx expo prebuild --platform ios
+          rm -rf ios
+          npx expo prebuild --platform ios --no-install
           cd ios
+          echo "export NODE_BINARY=$(which node)" > .xcode.env
           echo "export NODE_BINARY=$(which node)" > .xcode.env.local
-          sudo ln -sf $(which node) /usr/local/bin/node
+          pod install
 
       - name: Build (no code signing)
         run: |
