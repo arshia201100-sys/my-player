@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15  # تغییر حیاتی: اجبار گیت‌هاب به استفاده از سیستم‌عامل جدید و Xcode 16.1
     steps:
       - uses: actions/checkout@v4
 
@@ -20,12 +20,11 @@ jobs:
 
       - name: Generate native iOS project
         run: |
-          rm -rf ios
-          npx expo prebuild --platform ios --no-install
+          npx expo prebuild --platform ios
+          # معرفی مسیر Node به Xcode برای جلوگیری از ارور اسکریپت‌های اکسپو
           cd ios
           echo "export NODE_BINARY=$(which node)" > .xcode.env
           echo "export NODE_BINARY=$(which node)" > .xcode.env.local
-          pod install
 
       - name: Build (no code signing)
         run: |
