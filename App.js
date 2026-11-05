@@ -16,12 +16,13 @@ import {
   Image,
   Animated,
   Easing,
+  ScrollView,
 } from 'react-native';
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import { BlurView } from 'expo-blur';
+import DocumentPicker, { types } from 'react-native-document-picker';
+import RNFS from 'react-native-fs';
+import { BlurView, VibrancyView } from '@react-native-community/blur';
 import Slider from '@react-native-community/slider';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
@@ -36,14 +37,20 @@ const formatTime = (secs) => {
 const stripExt = (name) => (name || '').replace(/\.[^/.]+$/, '');
 
 export default function App() {
-  // ----- States -----
+  // ----- Global -----
   const [showWelcome, setShowWelcome] = useState(true);
+  const [activeTab, setActiveTab] = useState('player'); // player | pc | files
   const fadeAnim = useRef(new Animated.Value(1)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const scaleAnim = useRef(new Animated.Value(0.92)).current;
   const blobAnim = useRef(new Animated.Value(0)).current;
-  const pillDropAnim = useRef(new Animated.Value(-50)).current;
+  const pillDropAnim = useRef(new Animated.Value(-60)).current;
   const artworkGlow = useRef(new Animated.Value(0)).current;
 
+  const [serverIP, setServerIP] = useState('192.168.1.92');
+  const [isSettingsVisible, setSettingsVisible] = useState(false);
+  const SERVER_URL = `http://${serverIP}:5000`;
+
+  // ----- Player -----
   const [loading, setLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [trackName, setTrackName] = useState('هیچ موزیکی در حال پخش نیست');
@@ -51,83 +58,48 @@ export default function App() {
   const [position, setPosition] = useState(0);
   const [volume, setVolume] = useState(0.7);
   const [coverError, setCoverError] = useState(false);
-
-  const [serverIP, setServerIP] = useState('192.168.1.92');
   const [recentTracks, setRecentTracks] = useState([]);
   const [isArchiveVisible, setArchiveVisible] = useState(false);
-  const [isSettingsVisible, setSettingsVisible] = useState(false);
-
-  const SERVER_URL = `http://${serverIP}:5000`;
   const isSliding = useRef(false);
   const slideTimeout = useRef(null);
 
+  // ----- File transfer -----
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [lastUploaded, setLastUploaded] = useState(null);
+
+  // ----- PC control -----
+  const [pcBusy, setPcBusy] = useState(false);
+
   // ----- Effects -----
   useEffect(() => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      friction: 5,
-      useNativeDriver: true,
-    }).start();
-
+    Animated.spring(scaleAnim, { toValue: 1, tension: 40, friction: 7, useNativeDriver: true }).start();
     Animated.loop(
       Animated.sequence([
-        Animated.timing(blobAnim, {
-          toValue: 1,
-          duration: 8000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(blobAnim, {
-          toValue: 0,
-          duration: 8000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
+        Animated.timing(blobAnim, { toValue: 1, duration: 10000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(blobAnim, { toValue: 0, duration: 10000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ])
     ).start();
-
     Animated.loop(
       Animated.sequence([
-        Animated.timing(artworkGlow, {
-          toValue: 1,
-          duration: 3000,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(artworkGlow, {
-          toValue: 0,
-          duration: 3000,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
+        Animated.timing(artworkGlow, { toValue: 1, duration: 3500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(artworkGlow, { toValue: 0, duration: 3500, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
       ])
     ).start();
   }, []);
 
   useEffect(() => {
-    AsyncStorage.getItem('serverIP').then((v) => {
-      if (v) setServerIP(v);
-    });
+    AsyncStorage.getItem('serverIP').then((v) => { if (v) setServerIP(v); });
   }, []);
 
   const handleStartApp = () => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 400,
-      useNativeDriver: true,
-    }).start(() => {
+    Animated.timing(fadeAnim, { toValue: 0, duration: 350, useNativeDriver: true }).start(() => {
       setShowWelcome(false);
-      Animated.spring(pillDropAnim, {
-        toValue: Platform.OS === 'ios' ? 50 : 20,
-        friction: 6,
-        useNativeDriver: true,
-      }).start();
+      Animated.spring(pillDropAnim, { toValue: Platform.OS === 'ios' ? 54 : 24, tension: 50, friction: 8, useNativeDriver: true }).start();
     });
   };
 
-  useEffect(() => {
-    setCoverError(false);
-  }, [trackName]);
+  useEffect(() => { setCoverError(false); }, [trackName]);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -138,44 +110,36 @@ export default function App() {
           setIsPlaying(data.is_playing);
           setTrackName(data.track_name);
           setDuration(data.duration);
-
-          if (!isSliding.current) {
-            setPosition(data.position);
-          }
+          if (!isSliding.current) setPosition(data.position);
           setVolume(data.volume);
         }
       } catch (e) {}
     };
-
     if (showWelcome) return;
-
     const interval = setInterval(fetchStatus, 1000);
     return () => clearInterval(interval);
   }, [serverIP, showWelcome]);
 
-  // ----- Network Functions -----
+  // ----- Player functions -----
   const sendFileToServer = async (uri, name) => {
     setLoading(true);
     setArchiveVisible(false);
     try {
-      const base64Data = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      const cleanUri = Platform.OS === 'ios' ? decodeURIComponent(uri.replace('file://', '')) : uri;
+      const base64Data = await RNFS.readFile(cleanUri, 'base64');
 
       const response = await fetch(`${SERVER_URL}/play`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: name, data: base64Data }),
       });
-
       if (!response.ok) throw new Error('خطا در سرور');
-
       setRecentTracks((prev) => {
         const filtered = prev.filter((t) => t.name !== name);
         return [{ name, uri }, ...filtered];
       });
     } catch (error) {
-      Alert.alert('خطا', 'ارتباط با سیستم برقرار نشد. آی‌پی یا اجرای server.py را بررسی کنید.');
+      Alert.alert('خطا', 'ارتباط با سرور برقرار نشد.');
     } finally {
       setLoading(false);
     }
@@ -183,15 +147,14 @@ export default function App() {
 
   const pickAndPlayMusic = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'audio/*',
-        copyToCacheDirectory: true,
+      const result = await DocumentPicker.pickSingle({
+        type: [types.audio],
+        copyTo: 'cachesDirectory',
       });
-
-      if (!result.canceled) {
-        sendFileToServer(result.assets[0].uri, result.assets[0].name);
-      }
-    } catch (error) {}
+      if (result) sendFileToServer(result.fileCopyUri || result.uri, result.name);
+    } catch (error) {
+      if (!DocumentPicker.isCancel(error)) Alert.alert('خطا', 'مشکلی در انتخاب فایل پیش آمد.');
+    }
   };
 
   const togglePause = async () => {
@@ -204,8 +167,7 @@ export default function App() {
   const playRelative = (step) => {
     if (recentTracks.length === 0) return;
     const i = recentTracks.findIndex((t) => t.name === trackName);
-    const nextIndex = (i + step + recentTracks.length) % recentTracks.length;
-    const next = recentTracks[nextIndex];
+    const next = recentTracks[(i + step + recentTracks.length) % recentTracks.length];
     if (next) sendFileToServer(next.uri, next.name);
   };
 
@@ -213,9 +175,7 @@ export default function App() {
     isSliding.current = true;
     if (slideTimeout.current) clearTimeout(slideTimeout.current);
   };
-
   const onValueChange = (val) => setPosition(val);
-
   const handleSeek = async (val) => {
     setPosition(val);
     try {
@@ -225,12 +185,9 @@ export default function App() {
         body: JSON.stringify({ position: val }),
       });
     } finally {
-      slideTimeout.current = setTimeout(() => {
-        isSliding.current = false;
-      }, 1500);
+      slideTimeout.current = setTimeout(() => { isSliding.current = false; }, 1200);
     }
   };
-
   const handleVolume = async (val) => {
     setVolume(val);
     try {
@@ -244,165 +201,396 @@ export default function App() {
 
   const coverUrl = `${SERVER_URL}/cover?t=${encodeURIComponent(trackName)}`;
 
-  const blob1TranslateY = blobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 50] });
-  const blob2TranslateX = blobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -40] });
-  const blob3Scale = blobAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] });
-  const glowOpacity = artworkGlow.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.55] });
+  // ----- File transfer -----
+  const pickAndSendFile = async () => {
+    try {
+      const file = await DocumentPicker.pickSingle({
+        type: [types.allFiles],
+        copyTo: 'cachesDirectory',
+      });
+      if (!file) return;
+
+      setUploading(true);
+      setUploadProgress(0);
+
+      const targetUri = file.fileCopyUri || file.uri;
+      const formData = new FormData();
+      formData.append('filename', file.name);
+      formData.append('file', {
+        uri: targetUri,
+        type: file.type || 'application/octet-stream',
+        name: file.name,
+      });
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${SERVER_URL}/upload`);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && event.total > 0) {
+          setUploadProgress(event.loaded / event.total);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) setLastUploaded(file.name);
+        else Alert.alert('خطا', 'پاسخ ناموفق از سرور.');
+        setUploading(false);
+        setUploadProgress(0);
+      };
+
+      xhr.onerror = () => {
+        Alert.alert('خطا', 'ارسال ناموفق بود.');
+        setUploading(false);
+        setUploadProgress(0);
+      };
+
+      xhr.send(formData);
+    } catch (error) {
+      if (!DocumentPicker.isCancel(error)) Alert.alert('خطا', 'ارسال فایل با شکست مواجه شد.');
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // ----- PC control -----
+  const callSystemAction = (action, label, confirmMsg) => {
+    Alert.alert(label, confirmMsg, [
+      { text: 'انصراف', style: 'cancel' },
+      {
+        text: 'تأیید',
+        style: 'destructive',
+        onPress: async () => {
+          setPcBusy(true);
+          try {
+            const res = await fetch(`${SERVER_URL}/system/${action}`, { method: 'POST' });
+            if (!res.ok) throw new Error();
+          } catch (e) {
+            Alert.alert('خطا', 'دستور به سیستم نرسید.');
+          } finally {
+            setPcBusy(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const cancelShutdown = async () => {
+    try {
+      await fetch(`${SERVER_URL}/system/cancel`, { method: 'POST' });
+    } catch (e) {}
+  };
+
+  const blob1TranslateY = blobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 70] });
+  const blob2TranslateX = blobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -60] });
+  const blob3Scale = blobAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.3] });
+  const glowOpacity = artworkGlow.interpolate({ inputRange: [0, 1], outputRange: [0.18, 0.45] });
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Liquid Background */}
+      {/* نورپردازی مایع پشت شیشه (Liquid Fluid Layer) */}
       <View style={styles.bgContainer}>
         <Animated.View style={[styles.bgBlob, styles.blob1, { transform: [{ translateY: blob1TranslateY }] }]} />
         <Animated.View style={[styles.bgBlob, styles.blob2, { transform: [{ translateX: blob2TranslateX }] }]} />
         <Animated.View style={[styles.bgBlob, styles.blob3, { transform: [{ scale: blob3Scale }] }]} />
       </View>
-      <BlurView intensity={95} style={StyleSheet.absoluteFill} tint="dark" />
+
+      {/* لایه شیشه‌ای پایه اپل */}
+      <BlurView
+        style={StyleSheet.absoluteFill}
+        blurType="ultraThinMaterialDark"
+        blurAmount={30}
+        reducedTransparencyFallbackColor="#000"
+      />
       <View style={styles.glassSheen} pointerEvents="none" />
 
-      {/* Top status pill */}
+      {/* Dynamic Pill / جزیره شناور بالا */}
       {!showWelcome && (
-        <Animated.View style={[styles.topPillContainer, { transform: [{ translateY: pillDropAnim }] }]}>
-          <BlurView intensity={85} style={styles.topPillBlur} tint="dark">
-            <View style={styles.topPillInnerBorder} pointerEvents="none" />
-            <Ionicons name="musical-notes" size={14} color="#FFF" />
-            <Text style={styles.topPillText}>Ashi Player</Text>
+        <Animated.View style={[styles.topPillContainer, { transform: [{ translateY: pillDropAnim }] }]} collapsable={false}>
+          <BlurView blurType="chromeMaterialDark" blurAmount={20} style={styles.topPillBlur}>
+            <View style={styles.specularHairline} pointerEvents="none" />
+            <Ionicons
+              name={activeTab === 'player' ? 'musical-notes' : activeTab === 'pc' ? 'desktop' : 'cloud-upload'}
+              size={13}
+              color="rgba(255,255,255,0.9)"
+            />
+            <Text style={styles.topPillText}>
+              {activeTab === 'player' ? 'Ashi Player' : activeTab === 'pc' ? 'Control Center' : 'Drop Share'}
+            </Text>
           </BlurView>
         </Animated.View>
       )}
 
-      {/* Main Content */}
-      <View style={styles.safeArea}>
-        <View style={styles.header}>
-          <Text style={styles.headerText}>NOW PLAYING</Text>
-        </View>
+      {/* ===================== PLAYER TAB ===================== */}
+      {!showWelcome && activeTab === 'player' && (
+        <View style={styles.safeArea}>
+          <View style={styles.header}><Text style={styles.headerText}>NOW PLAYING</Text></View>
 
-        {/* Artwork */}
-        <View style={styles.artworkWrapper}>
-          <Animated.View style={[styles.artworkGlow, { opacity: glowOpacity }]} />
-          <View style={styles.artworkContainer}>
-            {!coverError ? (
-              <Image source={{ uri: coverUrl }} style={styles.coverImage} onError={() => setCoverError(true)} />
-            ) : (
-              <Ionicons name="musical-notes" size={80} color="rgba(255,255,255,0.2)" />
-            )}
-            <View style={styles.artworkBorder} pointerEvents="none" />
-          </View>
-        </View>
-
-        {/* Info */}
-        <View style={styles.infoContainer}>
-          <Text numberOfLines={1} style={styles.title}>
-            {stripExt(trackName)}
-          </Text>
-          <Text style={styles.subtitle}>High-Res Audio • Desktop</Text>
-        </View>
-
-        {/* Time Slider */}
-        <View style={styles.sliderContainer}>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={duration > 0 ? duration : 1}
-            value={position}
-            onSlidingStart={onSlidingStart}
-            onValueChange={onValueChange}
-            onSlidingComplete={handleSeek}
-            minimumTrackTintColor="#FFFFFF"
-            maximumTrackTintColor="rgba(255,255,255,0.2)"
-            thumbTintColor="#FFFFFF"
-          />
-          <View style={styles.timeRow}>
-            <Text style={styles.timeText}>{formatTime(position)}</Text>
-            <Text style={styles.timeText}>-{formatTime(duration - position)}</Text>
-          </View>
-        </View>
-
-        {/* Controls */}
-        <View style={styles.controls}>
-          <TouchableOpacity activeOpacity={0.6} style={styles.controlIcon} onPress={() => playRelative(1)}>
-            <Ionicons name="play-skip-back" size={34} color="#FFF" />
-          </TouchableOpacity>
-
-          <TouchableOpacity activeOpacity={0.85} onPress={togglePause} style={styles.playBtn}>
-            <BlurView intensity={70} style={styles.playBtnBlur} tint="light">
-              <View style={styles.playBtnBorder} pointerEvents="none" />
-              {loading ? (
-                <ActivityIndicator size="large" color="#000" />
+          <View style={styles.artworkWrapper}>
+            <Animated.View style={[styles.artworkGlow, { opacity: glowOpacity }]} />
+            <View style={styles.artworkContainer}>
+              {!coverError ? (
+                <Image source={{ uri: coverUrl }} style={styles.coverImage} onError={() => setCoverError(true)} />
               ) : (
-                <Ionicons
-                  name={isPlaying ? 'pause' : 'play'}
-                  size={34}
-                  color="#000"
-                  style={{ marginLeft: isPlaying ? 0 : 4 }}
-                />
+                <Ionicons name="musical-notes" size={82} color="rgba(255,255,255,0.25)" />
               )}
+              <View style={styles.specularHairline} pointerEvents="none" />
+            </View>
+          </View>
+
+          <View style={styles.infoContainer}>
+            <Text numberOfLines={1} style={styles.title}>{stripExt(trackName)}</Text>
+            <Text style={styles.subtitle}>Lossless • Spatial Audio</Text>
+          </View>
+
+          <View style={styles.sliderContainer}>
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={duration > 0 ? duration : 1}
+              value={position}
+              onSlidingStart={onSlidingStart}
+              onValueChange={onValueChange}
+              onSlidingComplete={handleSeek}
+              minimumTrackTintColor="#FFFFFF"
+              maximumTrackTintColor="rgba(255,255,255,0.18)"
+              thumbTintColor="#FFFFFF"
+            />
+            <View style={styles.timeRow}>
+              <Text style={styles.timeText}>{formatTime(position)}</Text>
+              <Text style={styles.timeText}>-{formatTime(duration - position)}</Text>
+            </View>
+          </View>
+
+          <View style={styles.controls}>
+            <TouchableOpacity activeOpacity={0.5} style={styles.controlIcon} onPress={() => playRelative(1)}>
+              <Ionicons name="play-skip-back" size={32} color="#FFF" />
+            </TouchableOpacity>
+
+            {/* دکمه پخش شیشه‌ای مات و شفاف استاندارد کنترل‌سنتر */}
+            <TouchableOpacity activeOpacity={0.8} onPress={togglePause} style={styles.playBtn} collapsable={false}>
+              <BlurView blurType="ultraThinMaterialLight" blurAmount={25} style={styles.playBtnBlur}>
+                <View style={styles.specularHairline} pointerEvents="none" />
+                {loading ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="#FFF" style={{ marginLeft: isPlaying ? 0 : 3 }} />
+                )}
+              </BlurView>
+            </TouchableOpacity>
+
+            <TouchableOpacity activeOpacity={0.5} style={styles.controlIcon} onPress={() => playRelative(-1)}>
+              <Ionicons name="play-skip-forward" size={32} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.volumeRow}>
+            <Ionicons name="volume-low" size={17} color="rgba(255,255,255,0.4)" />
+            <Slider
+              style={styles.volSlider}
+              minimumValue={0}
+              maximumValue={1}
+              value={volume}
+              onSlidingComplete={handleVolume}
+              minimumTrackTintColor="#FFFFFF"
+              maximumTrackTintColor="rgba(255,255,255,0.18)"
+              thumbTintColor="#FFFFFF"
+            />
+            <Ionicons name="volume-high" size={17} color="rgba(255,255,255,0.4)" />
+          </View>
+
+          <TouchableOpacity style={styles.appleGlassBtn} onPress={pickAndPlayMusic} collapsable={false}>
+            <BlurView blurType="thinMaterialDark" blurAmount={20} style={styles.appleGlassBtnInner}>
+              <View style={styles.specularHairline} pointerEvents="none" />
+              <Ionicons name="add" size={20} color="#FFF" />
+              <Text style={styles.appleGlassBtnText}>افزودن قطعه صوتی</Text>
             </BlurView>
           </TouchableOpacity>
 
-          <TouchableOpacity activeOpacity={0.6} style={styles.controlIcon} onPress={() => playRelative(-1)}>
-            <Ionicons name="play-skip-forward" size={34} color="#FFF" />
+          <TouchableOpacity style={styles.archiveLinkBtn} onPress={() => setArchiveVisible(true)}>
+            <Text style={styles.archiveLinkText}>آرشیو قطعات</Text>
+            <Ionicons name="chevron-back" size={14} color="rgba(255,255,255,0.4)" />
           </TouchableOpacity>
         </View>
+      )}
 
-        {/* Volume */}
-        <View style={styles.volumeRow}>
-          <Ionicons name="volume-low" size={18} color="rgba(255,255,255,0.5)" />
-          <Slider
-            style={styles.volSlider}
-            minimumValue={0}
-            maximumValue={1}
-            value={volume}
-            onSlidingComplete={handleVolume}
-            minimumTrackTintColor="#FFFFFF"
-            maximumTrackTintColor="rgba(255,255,255,0.2)"
-            thumbTintColor="#FFFFFF"
-          />
-          <Ionicons name="volume-high" size={18} color="rgba(255,255,255,0.5)" />
-        </View>
-      </View>
+      {/* ===================== PC CONTROL TAB ===================== */}
+      {!showWelcome && activeTab === 'pc' && (
+        <ScrollView
+          style={styles.safeAreaScroll}
+          contentContainerStyle={styles.pcContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}><Text style={styles.headerText}>DESKTOP CONTROL</Text></View>
+          <Text style={styles.pcTitle}>کنترل سیستم</Text>
+          <Text style={styles.pcSubtitle}>مدیریت بی‌درنگ وضعیت سخت‌افزار</Text>
 
-      {/* Dock */}
-      <View style={styles.dockContainer}>
-        <BlurView intensity={85} style={styles.dockBlur} tint="dark">
-          <View style={styles.dockBorder} pointerEvents="none" />
-          <TouchableOpacity style={styles.dockItem} onPress={() => setArchiveVisible(true)}>
-            <Ionicons name="albums" size={24} color="rgba(255,255,255,0.75)" />
+          <TouchableOpacity
+            style={styles.pcCard}
+            disabled={pcBusy}
+            activeOpacity={0.75}
+            onPress={() => callSystemAction('sleep', 'حالت اسلیپ', 'سیستم به حالت خواب برود؟')}
+            collapsable={false}>
+            <BlurView blurType="thinMaterialDark" blurAmount={20} style={styles.pcCardBlur}>
+              <View style={styles.specularHairline} pointerEvents="none" />
+              <View style={[styles.pcIconBox, { backgroundColor: 'rgba(94,92,230,0.22)' }]}>
+                <Ionicons name="moon" size={24} color="#8D8AFF" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pcCardTitle}>حالت خواب (Sleep)</Text>
+                <Text style={styles.pcCardDesc}>انتقال رایانه به حالت کم‌مصرف</Text>
+              </View>
+              <Ionicons name="chevron-back" size={17} color="rgba(255,255,255,0.3)" />
+            </BlurView>
           </TouchableOpacity>
 
-          <TouchableOpacity activeOpacity={0.85} onPress={pickAndPlayMusic}>
-            <View style={styles.dockMainCircle}>
-              <Ionicons name="add" size={30} color="#FFF" />
+          <TouchableOpacity
+            style={styles.pcCard}
+            disabled={pcBusy}
+            activeOpacity={0.75}
+            onPress={() => callSystemAction('restart', 'ری‌استارت', 'سیستم مجدداً راه‌اندازی شود؟')}
+            collapsable={false}>
+            <BlurView blurType="thinMaterialDark" blurAmount={20} style={styles.pcCardBlur}>
+              <View style={styles.specularHairline} pointerEvents="none" />
+              <View style={[styles.pcIconBox, { backgroundColor: 'rgba(50,173,230,0.22)' }]}>
+                <Ionicons name="refresh" size={24} color="#64D2FF" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pcCardTitle}>راه‌اندازی مجدد (Restart)</Text>
+                <Text style={styles.pcCardDesc}>ری‌استارت کامل در ۵ ثانیه</Text>
+              </View>
+              <Ionicons name="chevron-back" size={17} color="rgba(255,255,255,0.3)" />
+            </BlurView>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.pcCard}
+            disabled={pcBusy}
+            activeOpacity={0.75}
+            onPress={() => callSystemAction('shutdown', 'خاموشی', 'سیستم خاموش شود؟')}
+            collapsable={false}>
+            <BlurView blurType="thinMaterialDark" blurAmount={20} style={styles.pcCardBlur}>
+              <View style={styles.specularHairline} pointerEvents="none" />
+              <View style={[styles.pcIconBox, { backgroundColor: 'rgba(255,69,58,0.22)' }]}>
+                <Ionicons name="power" size={24} color="#FF6961" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pcCardTitle}>خاموش کردن (Shutdown)</Text>
+                <Text style={styles.pcCardDesc}>خاتمه تمام پردازش‌ها و خاموشی</Text>
+              </View>
+              <Ionicons name="chevron-back" size={17} color="rgba(255,255,255,0.3)" />
+            </BlurView>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.pcCancelBtn} onPress={cancelShutdown}>
+            <Text style={styles.pcCancelText}>لغو عملیات زمان‌بندی‌شده</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      )}
+
+      {/* ===================== FILE TRANSFER TAB ===================== */}
+      {!showWelcome && activeTab === 'files' && (
+        <View style={styles.safeArea}>
+          <View style={styles.header}><Text style={styles.headerText}>AIR TRANSFER</Text></View>
+          <Text style={styles.pcTitle}>ارسال مستقیم</Text>
+          <Text style={styles.pcSubtitle}>انتقال بی‌سیم فایل‌ها با حداکثر پهنای باند محلی</Text>
+
+          <View style={styles.uploadZoneWrapper}>
+            <View style={styles.uploadZone} collapsable={false}>
+              <BlurView blurType="thinMaterialDark" blurAmount={25} style={styles.uploadZoneBlur}>
+                <View style={styles.specularHairlineDashed} pointerEvents="none" />
+                {uploading ? (
+                  <>
+                    <ActivityIndicator size="large" color="#FFF" />
+                    <Text style={styles.uploadStatusText}>
+                      {Math.round(uploadProgress * 100)}% ارسـال شـد
+                    </Text>
+                    <View style={styles.progressTrack}>
+                      <View style={[styles.progressFill, { width: `${uploadProgress * 100}%` }]} />
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.uploadIconCircle}>
+                      <Ionicons name="arrow-up-circle-outline" size={44} color="rgba(255,255,255,0.8)" />
+                    </View>
+                    <Text style={styles.uploadHintText}>فایل را برای ارسال انتخاب کنید</Text>
+                    {lastUploaded && (
+                      <Text style={styles.lastUploadedText}>آخرین فایل: {lastUploaded}</Text>
+                    )}
+                  </>
+                )}
+              </BlurView>
             </View>
-          </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity style={styles.dockItem} onPress={() => setSettingsVisible(true)}>
-            <Ionicons name="settings" size={24} color="rgba(255,255,255,0.75)" />
+          <TouchableOpacity style={styles.appleGlassBtn} onPress={pickAndSendFile} disabled={uploading} collapsable={false}>
+            <BlurView blurType="ultraThinMaterialLight" blurAmount={20} style={styles.appleGlassBtnInner}>
+              <View style={styles.specularHairline} pointerEvents="none" />
+              <Ionicons name="document-text" size={19} color="#FFF" />
+              <Text style={styles.appleGlassBtnText}>انتخاب و انتقال فایل</Text>
+            </BlurView>
           </TouchableOpacity>
-        </BlurView>
-      </View>
+        </View>
+      )}
 
-      {/* Welcome Screen */}
+      {/* ===================== FLOATING DOCK (iOS Floating Bar) ===================== */}
+      {!showWelcome && (
+        <View style={styles.dockContainer} collapsable={false}>
+          <BlurView blurType="chromeMaterialDark" blurAmount={30} style={styles.dockBlur}>
+            <View style={styles.specularHairline} pointerEvents="none" />
+            <TouchableOpacity style={styles.dockItem} onPress={() => setActiveTab('player')}>
+              <Ionicons
+                name={activeTab === 'player' ? 'musical-notes' : 'musical-notes-outline'}
+                size={23}
+                color={activeTab === 'player' ? '#FFF' : 'rgba(255,255,255,0.38)'}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.dockItem} onPress={() => setActiveTab('pc')}>
+              <Ionicons
+                name={activeTab === 'pc' ? 'desktop' : 'desktop-outline'}
+                size={23}
+                color={activeTab === 'pc' ? '#FFF' : 'rgba(255,255,255,0.38)'}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.dockItem} onPress={() => setActiveTab('files')}>
+              <Ionicons
+                name={activeTab === 'files' ? 'cloud-upload' : 'cloud-upload-outline'}
+                size={23}
+                color={activeTab === 'files' ? '#FFF' : 'rgba(255,255,255,0.38)'}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.dockItem} onPress={() => setSettingsVisible(true)}>
+              <Ionicons name="settings-outline" size={23} color="rgba(255,255,255,0.7)" />
+            </TouchableOpacity>
+          </BlurView>
+        </View>
+      )}
+
+      {/* ===================== WELCOME SCREEN ===================== */}
       {showWelcome && (
         <Animated.View style={[styles.welcomeScreen, { opacity: fadeAnim }]}>
-          <BlurView intensity={100} style={styles.welcomeBlur} tint="dark">
+          <BlurView blurType="ultraThinMaterialDark" blurAmount={35} style={styles.welcomeBlur}>
             <Animated.View style={[styles.welcomeContent, { transform: [{ scale: scaleAnim }] }]}>
-              <View style={styles.welcomeIconWrapper}>
-                <BlurView intensity={80} style={styles.welcomeIconInner} tint="light">
-                  <View style={styles.welcomeIconBorder} pointerEvents="none" />
-                  <Ionicons name="play" size={58} color="#000" style={{ marginLeft: 8 }} />
+              <View style={styles.welcomeIconWrapper} collapsable={false}>
+                <BlurView blurType="chromeMaterialDark" blurAmount={30} style={styles.welcomeIconInner}>
+                  <View style={styles.specularHairline} pointerEvents="none" />
+                  <Ionicons name="play" size={54} color="#FFF" style={{ marginLeft: 6 }} />
                 </BlurView>
               </View>
               <Text style={styles.welcomeTitle}>Ashi Player</Text>
               <Text style={styles.welcomeSubtitle}>
-                پخش بدون محدودیت، کیفیت استودیویی، با معماری کنترل از راه دور.
+                تجربه مینیمال و یکپارچه استریم و کنترل سیستم عامل
               </Text>
-              <TouchableOpacity activeOpacity={0.85} onPress={handleStartApp} style={styles.welcomeBtn}>
-                <BlurView intensity={100} style={styles.welcomeBtnBlur} tint="light">
-                  <Text style={styles.welcomeBtnText}>ورود به سیستم</Text>
-                  <Ionicons name="arrow-forward" size={20} color="#000" />
+              <TouchableOpacity activeOpacity={0.8} onPress={handleStartApp} style={styles.welcomeBtn} collapsable={false}>
+                <BlurView blurType="ultraThinMaterialLight" blurAmount={25} style={styles.welcomeBtnBlur}>
+                  <View style={styles.specularHairline} pointerEvents="none" />
+                  <Text style={styles.welcomeBtnText}>شروع تجربه</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#FFF" />
                 </BlurView>
               </TouchableOpacity>
             </Animated.View>
@@ -410,23 +598,22 @@ export default function App() {
         </Animated.View>
       )}
 
-      {/* Archive Modal */}
+      {/* ===================== ARCHIVE SHEET ===================== */}
       <Modal animationType="slide" transparent visible={isArchiveVisible}>
         <View style={styles.modalOverlay}>
-          <BlurView intensity={95} style={styles.modalContent} tint="dark">
-            <View style={styles.modalInnerBorder} pointerEvents="none" />
+          <BlurView blurType="materialDark" blurAmount={30} style={styles.modalContent}>
+            <View style={styles.specularHairlineTop} pointerEvents="none" />
             <View style={styles.modalDragHandle} />
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>آرشیو موزیک‌ها</Text>
+              <Text style={styles.modalTitle}>آرشیو قطعات صوتی</Text>
               <TouchableOpacity style={styles.closeBtn} onPress={() => setArchiveVisible(false)}>
-                <Ionicons name="close" size={22} color="#FFF" />
+                <Ionicons name="close" size={20} color="#FFF" />
               </TouchableOpacity>
             </View>
-
             {recentTracks.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="layers-outline" size={56} color="rgba(255,255,255,0.2)" />
-                <Text style={styles.emptyText}>آرشیو شما خالی است.</Text>
+                <Ionicons name="disc-outline" size={56} color="rgba(255,255,255,0.2)" />
+                <Text style={styles.emptyText}>هیچ قطعه‌ای در حافظه موقت نیست.</Text>
               </View>
             ) : (
               <FlatList
@@ -436,12 +623,10 @@ export default function App() {
                 renderItem={({ item }) => (
                   <TouchableOpacity style={styles.archiveItem} onPress={() => sendFileToServer(item.uri, item.name)}>
                     <View style={styles.archiveIconBox}>
-                      <Ionicons name="musical-note" size={18} color="#FFF" />
+                      <Ionicons name="musical-note" size={17} color="#FFF" />
                     </View>
-                    <Text numberOfLines={1} style={styles.archiveItemText}>
-                      {stripExt(item.name)}
-                    </Text>
-                    <Ionicons name="play-circle" size={26} color="rgba(255,255,255,0.5)" />
+                    <Text numberOfLines={1} style={styles.archiveItemText}>{stripExt(item.name)}</Text>
+                    <Ionicons name="play-circle-outline" size={24} color="rgba(255,255,255,0.5)" />
                   </TouchableOpacity>
                 )}
               />
@@ -450,43 +635,43 @@ export default function App() {
         </View>
       </Modal>
 
-      {/* Settings Modal */}
+      {/* ===================== SETTINGS SHEET ===================== */}
       <Modal animationType="slide" transparent visible={isSettingsVisible}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
-          <BlurView intensity={95} style={styles.modalContent} tint="dark">
-            <View style={styles.modalInnerBorder} pointerEvents="none" />
+          <BlurView blurType="materialDark" blurAmount={30} style={styles.modalContent}>
+            <View style={styles.specularHairlineTop} pointerEvents="none" />
             <View style={styles.modalDragHandle} />
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>پیکربندی سرور</Text>
+              <Text style={styles.modalTitle}>پیکربندی شبکه</Text>
               <TouchableOpacity style={styles.closeBtn} onPress={() => setSettingsVisible(false)}>
-                <Ionicons name="close" size={22} color="#FFF" />
+                <Ionicons name="close" size={20} color="#FFF" />
               </TouchableOpacity>
             </View>
             <View style={styles.settingsBody}>
-              <Text style={styles.settingsLabel}>آدرس IPv4 سیستم هدف</Text>
+              <Text style={styles.settingsLabel}>نشانی آی‌پی سرور محلی (IPv4)</Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="server-outline" size={18} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
+                <Ionicons name="hardware-chip-outline" size={18} color="rgba(255,255,255,0.4)" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   value={serverIP}
                   onChangeText={setServerIP}
                   keyboardType="numbers-and-punctuation"
-                  placeholder="192.168.X.X"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  placeholder="192.168.1.X"
+                  placeholderTextColor="rgba(255,255,255,0.25)"
                 />
               </View>
               <Text style={styles.settingsHint}>
-                پورت سرور به صورت پیش‌فرض روی ۵۰۰۰ تنظیم شده است. مطمئن شوید گوشی و پی‌سی روی یک شبکه‌ی Wi-Fi هستند.
+                پورت پیش‌فرض ۵۰۰۰ است. هر دو دستگاه باید به یک روتر متصل باشند.
               </Text>
             </View>
             <TouchableOpacity
-              style={styles.saveBtn}
+              style={styles.appleActionBtn}
               onPress={async () => {
                 await AsyncStorage.setItem('serverIP', serverIP.trim());
                 setSettingsVisible(false);
               }}
             >
-              <Text style={styles.saveBtnText}>ذخیره تنظیمات</Text>
+              <Text style={styles.appleActionBtnText}>ذخیره تغییرات</Text>
             </TouchableOpacity>
           </BlurView>
         </KeyboardAvoidingView>
@@ -497,348 +682,331 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
+  bgContainer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden', backgroundColor: '#07070A' },
+  bgBlob: { position: 'absolute', borderRadius: 999, opacity: 0.55 },
+  blob1: { backgroundColor: '#5E5CE6', top: -80, left: -90, width: 420, height: 420 },
+  blob2: { backgroundColor: '#E02D58', bottom: 120, right: -120, width: 480, height: 480 },
+  blob3: { backgroundColor: '#007AFF', top: '32%', left: '12%', width: 320, height: 320 },
+  glassSheen: { position: 'absolute', top: 0, left: 0, right: 0, height: height * 0.4, backgroundColor: 'rgba(255,255,255,0.02)' },
 
-  bgContainer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden', backgroundColor: '#0A0A10' },
-  bgBlob: { position: 'absolute', borderRadius: 999, opacity: 0.6 },
-  blob1: { backgroundColor: '#5E5CE6', top: -100, left: -100, width: 400, height: 400 },
-  blob2: { backgroundColor: '#FF2A54', bottom: 100, right: -150, width: 500, height: 500 },
-  blob3: { backgroundColor: '#32ADE6', top: '30%', left: '10%', width: 300, height: 300 },
-
-  // لایه‌ی ظریف نور بالا برای حس شیشه
-  glassSheen: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: height * 0.35,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+  // حاشیه فوق‌نازک نوری اپل (Specular Hairline)
+  specularHairline: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  specularHairlineTop: {
+    ...StyleSheet.absoluteFillObject,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderBottomWidth: 0,
+  },
+  specularHairlineDashed: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    borderWidth: 1.2,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.2)',
   },
 
-  // کپسول وضعیت
   topPillContainer: {
     position: 'absolute',
     alignSelf: 'center',
     zIndex: 100,
     borderRadius: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 10,
-    overflow: 'hidden',
+    shadowRadius: 16,
   },
   topPillBlur: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  topPillInnerBorder: {
-    ...StyleSheet.absoluteFillObject,
+    paddingVertical: 7,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    overflow: 'hidden',
   },
-  topPillText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '800',
-    marginLeft: 6,
-    letterSpacing: 1,
-  },
+  topPillText: { color: '#FFF', fontSize: 13, fontWeight: '700', marginLeft: 6, letterSpacing: 0.5 },
 
-  safeArea: {
-    flex: 1,
-    alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 100 : 80,
-    width: '100%',
-  },
+  safeArea: { flex: 1, alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 104 : 84, width: '100%', paddingHorizontal: '8%' },
+  safeAreaScroll: { flex: 1, width: '100%' },
+  header: { marginBottom: 24, alignSelf: 'center' },
+  headerText: { color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '800', letterSpacing: 3 },
 
-  header: { marginBottom: 25 },
-  headerText: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '800', letterSpacing: 3 },
-
-  artworkWrapper: {
-    width: width * 0.75,
-    height: width * 0.75,
-    marginBottom: 35,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  artworkWrapper: { width: width * 0.74, height: width * 0.74, marginBottom: 32, justifyContent: 'center', alignItems: 'center' },
   artworkGlow: {
     position: 'absolute',
-    width: '108%',
-    height: '108%',
-    borderRadius: 32,
+    width: '105%',
+    height: '105%',
+    borderRadius: 30,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#FFFFFF',
+    shadowColor: '#FFF',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 40,
+    shadowOpacity: 0.4,
+    shadowRadius: 36,
   },
   artworkContainer: {
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 26,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 22 },
+    shadowOffset: { width: 0, height: 20 },
     shadowOpacity: 0.45,
-    shadowRadius: 30,
-    elevation: 15,
+    shadowRadius: 28,
     overflow: 'hidden',
-  },
-  artworkBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 26,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
   },
   coverImage: { width: '100%', height: '100%', resizeMode: 'cover' },
 
-  infoContainer: { width: '85%', alignItems: 'center', marginBottom: 25 },
-  title: { fontSize: 24, fontWeight: '800', color: '#FFF', marginBottom: 6, textAlign: 'center' },
-  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.5)', fontWeight: '600' },
+  infoContainer: { width: '100%', alignItems: 'center', marginBottom: 22 },
+  title: { fontSize: 22, fontWeight: '800', color: '#FFF', marginBottom: 6, textAlign: 'center', letterSpacing: -0.3 },
+  subtitle: { fontSize: 13, color: 'rgba(255,255,255,0.45)', fontWeight: '600', letterSpacing: 0.2 },
 
-  sliderContainer: { width: '85%', marginBottom: 20 },
-  slider: { width: '100%', height: 30 },
-  timeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 0,
-    paddingHorizontal: 2,
-  },
-  timeText: { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: '600', fontVariant: ['tabular-nums'] },
+  sliderContainer: { width: '100%', marginBottom: 16 },
+  slider: { width: '100%', height: 28 },
+  timeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2, paddingHorizontal: 4 },
+  timeText: { fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: '600', fontVariant: ['tabular-nums'] },
 
-  controls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', width: '100%', marginBottom: 30 },
-  controlIcon: { padding: 15, marginHorizontal: 20 },
+  controls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', width: '100%', marginBottom: 22 },
+  controlIcon: { padding: 14, marginHorizontal: 22 },
   playBtn: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    shadowColor: '#FFF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
     shadowRadius: 18,
   },
   playBtnBlur: {
     width: '100%',
     height: '100%',
-    borderRadius: 38,
+    borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-  },
-  playBtnBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 38,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
 
-  volumeRow: { flexDirection: 'row', alignItems: 'center', width: '85%', marginBottom: 90 },
-  volSlider: { flex: 1, marginHorizontal: 12, height: 30 },
+  volumeRow: { flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 22 },
+  volSlider: { flex: 1, marginHorizontal: 12, height: 28 },
 
+  appleGlassBtn: {
+    width: '100%',
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+  },
+  appleGlassBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  appleGlassBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14, marginLeft: 8 },
+  archiveLinkBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
+  archiveLinkText: { color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '600', marginLeft: 4 },
+
+  // PC Tab
+  pcContent: { paddingTop: Platform.OS === 'ios' ? 104 : 84, paddingHorizontal: '7%', paddingBottom: 130, alignItems: 'center' },
+  pcTitle: { fontSize: 26, fontWeight: '800', color: '#FFF', marginBottom: 6, alignSelf: 'flex-start', letterSpacing: -0.5 },
+  pcSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 26, alignSelf: 'flex-start', textAlign: 'right' },
+  pcCard: {
+    width: '100%',
+    borderRadius: 24,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+  },
+  pcCardBlur: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    padding: 18,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  pcIconBox: { width: 48, height: 48, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginLeft: 14 },
+  pcCardTitle: { color: '#FFF', fontSize: 15, fontWeight: '700', textAlign: 'right', marginBottom: 2 },
+  pcCardDesc: { color: 'rgba(255,255,255,0.45)', fontSize: 12, textAlign: 'right' },
+  pcCancelBtn: { marginTop: 12, paddingVertical: 8 },
+  pcCancelText: { color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+
+  // File Transfer
+  uploadZoneWrapper: { width: '100%', marginTop: 8, marginBottom: 24 },
+  uploadZone: {
+    width: '100%',
+    height: 220,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+  },
+  uploadZoneBlur: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 24,
+    overflow: 'hidden',
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  uploadIconCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  uploadHintText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600' },
+  lastUploadedText: { color: 'rgba(255,255,255,0.35)', fontSize: 12, marginTop: 8 },
+  uploadStatusText: { color: '#FFF', fontSize: 15, fontWeight: '700', marginTop: 12 },
+  progressTrack: { width: '80%', height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.12)', marginTop: 14, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: '#FFF', borderRadius: 2.5 },
+
+  // Floating Tab Dock
   dockContainer: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 30 : 20,
+    bottom: Platform.OS === 'ios' ? 28 : 18,
     width: '100%',
     alignItems: 'center',
     zIndex: 10,
   },
   dockBlur: {
     flexDirection: 'row',
-    width: 250,
-    height: 66,
-    borderRadius: 33,
+    width: 270,
+    height: 64,
+    borderRadius: 32,
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  dockBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 33,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.45,
+    shadowRadius: 24,
+    backgroundColor: 'rgba(30,30,35,0.35)',
   },
   dockItem: { padding: 10 },
-  dockMainCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#FFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#FFF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-  },
 
-  welcomeScreen: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: 99999,
-    elevation: 99999,
-  },
+  // Welcome Screen
+  welcomeScreen: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', zIndex: 99999 },
   welcomeBlur: { flex: 1, width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
   welcomeContent: { alignItems: 'center', paddingHorizontal: 40 },
   welcomeIconWrapper: {
-    width: 120,
-    height: 120,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 35,
-    overflow: 'hidden',
-    shadowColor: '#FFF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 25,
-  },
-  welcomeIconInner: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
-  welcomeIconBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 40,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  welcomeTitle: { fontSize: 36, fontWeight: '900', color: '#FFF', marginBottom: 15, letterSpacing: 1 },
-  welcomeSubtitle: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 50,
-    fontWeight: '500',
-  },
-  welcomeBtn: {
-    width: 200,
-    height: 60,
-    borderRadius: 30,
-    overflow: 'hidden',
+    width: 110,
+    height: 110,
+    borderRadius: 36,
+    marginBottom: 30,
     shadowColor: '#FFF',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.2,
-    shadowRadius: 20,
+    shadowRadius: 28,
+  },
+  welcomeIconInner: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  welcomeTitle: { fontSize: 34, fontWeight: '900', color: '#FFF', marginBottom: 12, letterSpacing: -0.5 },
+  welcomeSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center', lineHeight: 22, marginBottom: 44, fontWeight: '500' },
+  welcomeBtn: {
+    width: 190,
+    height: 56,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 18,
   },
   welcomeBtnBlur: {
     flexDirection: 'row',
     width: '100%',
     height: '100%',
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  welcomeBtnText: { color: '#000', fontSize: 16, fontWeight: '800', marginRight: 10 },
-
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' },
-  modalContent: {
-    height: '65%',
-    width: '100%',
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    paddingHorizontal: 25,
-    paddingTop: 15,
-    paddingBottom: 35,
     overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  modalInnerBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    borderBottomWidth: 0,
+  welcomeBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700', marginRight: 8 },
+
+  // Modals & Bottom Sheets
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
+  modalContent: {
+    height: '62%',
+    width: '100%',
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    paddingHorizontal: 24,
+    paddingTop: 14,
+    paddingBottom: 32,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(20,20,25,0.4)',
   },
-  modalDragHandle: {
-    width: 40,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
-  modalTitle: { fontSize: 24, fontWeight: '800', color: '#FFF' },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 50 },
-  emptyText: { marginTop: 15, fontSize: 16, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
+  modalDragHandle: { width: 36, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.25)', alignSelf: 'center', marginBottom: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 },
+  modalTitle: { fontSize: 22, fontWeight: '800', color: '#FFF' },
+  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center' },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 40 },
+  emptyText: { marginTop: 14, fontSize: 15, color: 'rgba(255,255,255,0.35)', fontWeight: '600' },
   archiveItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     padding: 12,
-    borderRadius: 20,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 18,
+    marginBottom: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  archiveIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,42,84,0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  archiveItemText: { flex: 1, marginHorizontal: 15, fontSize: 16, fontWeight: '600', color: '#FFF' },
-  settingsBody: { flex: 1, marginTop: 10 },
-  settingsLabel: { fontSize: 14, fontWeight: '700', color: 'rgba(255,255,255,0.6)', marginBottom: 10, marginLeft: 5 },
+  archiveIconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,42,84,0.7)', justifyContent: 'center', alignItems: 'center' },
+  archiveItemText: { flex: 1, marginHorizontal: 14, fontSize: 15, fontWeight: '600', color: '#FFF' },
+  settingsBody: { flex: 1, marginTop: 8 },
+  settingsLabel: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.5)', marginBottom: 8, marginLeft: 4 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
-  inputIcon: { marginRight: 10 },
-  input: {
-    flex: 1,
+  inputIcon: { marginRight: 8 },
+  input: { flex: 1, paddingVertical: 16, fontSize: 17, fontWeight: '600', color: '#FFF', letterSpacing: 1.5 },
+  settingsHint: { fontSize: 12, color: 'rgba(255,255,255,0.35)', lineHeight: 20, textAlign: 'justify', paddingHorizontal: 4 },
+  appleActionBtn: {
+    backgroundColor: '#FFFFFF',
     paddingVertical: 18,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFF',
-    letterSpacing: 2,
-  },
-  settingsHint: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.4)',
-    lineHeight: 22,
-    textAlign: 'justify',
-    paddingHorizontal: 5,
-  },
-  saveBtn: {
-    backgroundColor: '#FFF',
-    padding: 20,
-    borderRadius: 25,
+    borderRadius: 22,
     alignItems: 'center',
     shadowColor: '#FFF',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
-  saveBtnText: { color: '#000', fontSize: 18, fontWeight: '800' },
+  appleActionBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
 });

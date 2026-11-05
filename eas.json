@@ -1,5 +1,6 @@
 {
   "cli": {
+<<<<<<< HEAD
     "version": ">= 24.12.1",
     "appVersionSource": "remote"
   },
@@ -19,3 +20,14 @@
     "production": {}
   }
 }
+=======
+    "version": ">= 12.0.0"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {}
+  }
+}
+>>>>>>> 7a26f9a (Setup bare iOS configuration and build workflow)
