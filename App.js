@@ -275,22 +275,23 @@ export default function App() {
   const blob1TranslateY = blobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 60] });
   const blob2TranslateX = blobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -50] });
   const blob3Scale = blobAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.25] });
-  const glowOpacity = artworkGlow.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.4] });
+  const glowOpacity = artworkGlow.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.38] });
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
+      {/* Animated Background Blobs */}
       <View style={styles.bgContainer}>
         <Animated.View style={[styles.bgBlob, styles.blob1, { transform: [{ translateY: blob1TranslateY }] }]} />
         <Animated.View style={[styles.bgBlob, styles.blob2, { transform: [{ translateX: blob2TranslateX }] }]} />
         <Animated.View style={[styles.bgBlob, styles.blob3, { transform: [{ scale: blob3Scale }] }]} />
       </View>
 
-      {/* Top Pill / borderRadius: 20 */}
+      {/* Top Pill - Glass */}
       {!showWelcome && (
         <Animated.View style={[styles.topPillContainer, { transform: [{ translateY: pillDropAnim }] }]}>
-          <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={70} />
+          <BlurView style={StyleSheet.absoluteFill} tint="systemChromeMaterialDark" intensity={85} />
           <View style={styles.specularHairline20} pointerEvents="none" />
           <Ionicons
             name={activeTab === 'player' ? 'musical-notes' : activeTab === 'pc' ? 'desktop' : 'cloud-upload'}
@@ -310,25 +311,31 @@ export default function App() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}><Text style={styles.headerText}>NOW PLAYING</Text></View>
+          <View style={styles.header}>
+            <Text style={styles.headerText}>NOW PLAYING</Text>
+          </View>
 
+          {/* Artwork */}
           <View style={styles.artworkWrapper}>
             <Animated.View style={[styles.artworkGlow, { opacity: glowOpacity }]} />
             <View style={styles.artworkContainer}>
+              <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={40} />
               {!coverError ? (
                 <Image source={{ uri: coverUrl }} style={styles.coverImage} onError={() => setCoverError(true)} />
               ) : (
-                <Ionicons name="musical-notes" size={82} color="rgba(255,255,255,0.25)" />
+                <Ionicons name="musical-notes" size={82} color="rgba(255,255,255,0.22)" />
               )}
               <View style={styles.specularHairline28} pointerEvents="none" />
             </View>
           </View>
 
+          {/* Track Info */}
           <View style={styles.infoContainer}>
             <Text numberOfLines={1} style={styles.title}>{stripExt(trackName)}</Text>
             <Text style={styles.subtitle}>Lossless Audio • High-Res</Text>
           </View>
 
+          {/* Progress Slider */}
           <View style={styles.sliderContainer}>
             <Slider
               style={styles.slider}
@@ -339,7 +346,7 @@ export default function App() {
               onValueChange={onValueChange}
               onSlidingComplete={handleSeek}
               minimumTrackTintColor="#FFFFFF"
-              maximumTrackTintColor="rgba(255,255,255,0.2)"
+              maximumTrackTintColor="rgba(255,255,255,0.18)"
               thumbTintColor="#FFFFFF"
             />
             <View style={styles.timeRow}>
@@ -348,18 +355,24 @@ export default function App() {
             </View>
           </View>
 
+          {/* Controls */}
           <View style={styles.controls}>
             <TouchableOpacity activeOpacity={0.5} style={styles.controlIcon} onPress={() => playRelative(1)}>
               <Ionicons name="play-skip-back" size={32} color="#FFF" />
             </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={0.75} onPress={togglePause} style={styles.playBtn}>
-              <BlurView style={StyleSheet.absoluteFill} tint="light" intensity={40} />
+            <TouchableOpacity activeOpacity={0.8} onPress={togglePause} style={styles.playBtn}>
+              <BlurView style={StyleSheet.absoluteFill} tint="systemThickMaterialLight" intensity={55} />
               <View style={styles.specularHairlineRound} pointerEvents="none" />
               {loading ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
-                <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="#FFF" style={{ marginLeft: isPlaying ? 0 : 3 }} />
+                <Ionicons
+                  name={isPlaying ? 'pause' : 'play'}
+                  size={32}
+                  color="#FFF"
+                  style={{ marginLeft: isPlaying ? 0 : 3 }}
+                />
               )}
             </TouchableOpacity>
 
@@ -368,6 +381,7 @@ export default function App() {
             </TouchableOpacity>
           </View>
 
+          {/* Volume */}
           <View style={styles.volumeRow}>
             <Ionicons name="volume-low" size={17} color="rgba(255,255,255,0.4)" />
             <Slider
@@ -377,15 +391,15 @@ export default function App() {
               value={volume}
               onSlidingComplete={handleVolume}
               minimumTrackTintColor="#FFFFFF"
-              maximumTrackTintColor="rgba(255,255,255,0.2)"
+              maximumTrackTintColor="rgba(255,255,255,0.18)"
               thumbTintColor="#FFFFFF"
             />
             <Ionicons name="volume-high" size={17} color="rgba(255,255,255,0.4)" />
           </View>
 
-          {/* glassActionBtn / borderRadius: 20 */}
+          {/* Add Track Button - Glass */}
           <TouchableOpacity style={styles.glassActionBtn} onPress={pickAndPlayMusic} activeOpacity={0.75}>
-            <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={60} />
+            <BlurView style={StyleSheet.absoluteFill} tint="systemChromeMaterialDark" intensity={75} />
             <View style={styles.specularHairline20} pointerEvents="none" />
             <Ionicons name="add" size={20} color="#FFF" />
             <Text style={styles.glassActionBtnText}>افزودن قطعه صوتی</Text>
@@ -405,20 +419,22 @@ export default function App() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}><Text style={styles.headerText}>DESKTOP CONTROL</Text></View>
+          <View style={styles.header}>
+            <Text style={styles.headerText}>DESKTOP CONTROL</Text>
+          </View>
           <Text style={styles.pcTitle}>کنترل سیستم</Text>
           <Text style={styles.pcSubtitle}>مدیریت بی‌درنگ وضعیت سخت‌افزار</Text>
 
-          {/* pcCard / borderRadius: 24 */}
+          {/* Sleep Card */}
           <TouchableOpacity
             style={styles.pcCard}
             disabled={pcBusy}
             activeOpacity={0.75}
             onPress={() => callSystemAction('sleep', 'حالت اسلیپ', 'سیستم به حالت خواب برود؟')}
           >
-            <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={70} />
+            <BlurView style={StyleSheet.absoluteFill} tint="systemChromeMaterialDark" intensity={80} />
             <View style={styles.specularHairline24} pointerEvents="none" />
-            <View style={[styles.pcIconBox, { backgroundColor: 'rgba(94,92,230,0.3)' }]}>
+            <View style={[styles.pcIconBox, { backgroundColor: 'rgba(94,92,230,0.28)' }]}>
               <Ionicons name="moon" size={24} color="#8D8AFF" />
             </View>
             <View style={{ flex: 1 }}>
@@ -428,15 +444,16 @@ export default function App() {
             <Ionicons name="chevron-back" size={17} color="rgba(255,255,255,0.3)" />
           </TouchableOpacity>
 
+          {/* Restart Card */}
           <TouchableOpacity
             style={styles.pcCard}
             disabled={pcBusy}
             activeOpacity={0.75}
             onPress={() => callSystemAction('restart', 'ری‌استارت', 'سیستم مجدداً راه‌اندازی شود؟')}
           >
-            <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={70} />
+            <BlurView style={StyleSheet.absoluteFill} tint="systemChromeMaterialDark" intensity={80} />
             <View style={styles.specularHairline24} pointerEvents="none" />
-            <View style={[styles.pcIconBox, { backgroundColor: 'rgba(50,173,230,0.3)' }]}>
+            <View style={[styles.pcIconBox, { backgroundColor: 'rgba(50,173,230,0.28)' }]}>
               <Ionicons name="refresh" size={24} color="#64D2FF" />
             </View>
             <View style={{ flex: 1 }}>
@@ -446,15 +463,16 @@ export default function App() {
             <Ionicons name="chevron-back" size={17} color="rgba(255,255,255,0.3)" />
           </TouchableOpacity>
 
+          {/* Shutdown Card */}
           <TouchableOpacity
             style={styles.pcCard}
             disabled={pcBusy}
             activeOpacity={0.75}
             onPress={() => callSystemAction('shutdown', 'خاموشی', 'سیستم خاموش شود؟')}
           >
-            <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={70} />
+            <BlurView style={StyleSheet.absoluteFill} tint="systemChromeMaterialDark" intensity={80} />
             <View style={styles.specularHairline24} pointerEvents="none" />
-            <View style={[styles.pcIconBox, { backgroundColor: 'rgba(255,69,58,0.3)' }]}>
+            <View style={[styles.pcIconBox, { backgroundColor: 'rgba(255,69,58,0.28)' }]}>
               <Ionicons name="power" size={24} color="#FF6961" />
             </View>
             <View style={{ flex: 1 }}>
@@ -477,13 +495,15 @@ export default function App() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}><Text style={styles.headerText}>AIR TRANSFER</Text></View>
+          <View style={styles.header}>
+            <Text style={styles.headerText}>AIR TRANSFER</Text>
+          </View>
           <Text style={styles.pcTitle}>ارسال مستقیم</Text>
           <Text style={styles.pcSubtitle}>انتقال بی‌سیم فایل‌ها به سیستم</Text>
 
           <View style={styles.uploadZoneWrapper}>
             <View style={styles.uploadZone}>
-              <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={70} />
+              <BlurView style={StyleSheet.absoluteFill} tint="systemChromeMaterialDark" intensity={80} />
               <View style={styles.specularHairlineDashed} pointerEvents="none" />
               {uploading ? (
                 <>
@@ -509,9 +529,13 @@ export default function App() {
             </View>
           </View>
 
-          {/* glassActionBtn / borderRadius: 20 */}
-          <TouchableOpacity style={styles.glassActionBtn} onPress={pickAndSendFile} disabled={uploading} activeOpacity={0.75}>
-            <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={70} />
+          <TouchableOpacity
+            style={styles.glassActionBtn}
+            onPress={pickAndSendFile}
+            disabled={uploading}
+            activeOpacity={0.75}
+          >
+            <BlurView style={StyleSheet.absoluteFill} tint="systemChromeMaterialDark" intensity={80} />
             <View style={styles.specularHairline20} pointerEvents="none" />
             <Ionicons name="document-text" size={19} color="#FFF" />
             <Text style={styles.glassActionBtnText}>انتخاب و انتقال فایل</Text>
@@ -519,22 +543,23 @@ export default function App() {
         </ScrollView>
       )}
 
-      {/* ===================== داک شناور دو تکه شیشه‌ای ===================== */}
+      {/* ===================== Floating Glass Dock ===================== */}
       {!showWelcome && (
         <View style={styles.floatingBarWrapper} pointerEvents="box-none">
-          
+          {/* Settings Circle */}
           <TouchableOpacity
             style={styles.circleGlassBtn}
             onPress={() => setSettingsVisible(true)}
             activeOpacity={0.7}
           >
-            <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={80} />
+            <BlurView style={StyleSheet.absoluteFill} tint="systemChromeMaterialDark" intensity={90} />
             <View style={styles.specularHairlineRound} pointerEvents="none" />
             <Ionicons name="settings-outline" size={22} color="#FFF" />
           </TouchableOpacity>
 
+          {/* Main Dock Capsule */}
           <View style={styles.capsuleGlassDock}>
-            <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={80} />
+            <BlurView style={StyleSheet.absoluteFill} tint="systemChromeMaterialDark" intensity={90} />
             <View style={styles.specularHairlineRound} pointerEvents="none" />
 
             <TouchableOpacity
@@ -545,7 +570,7 @@ export default function App() {
               <Ionicons
                 name={activeTab === 'player' ? 'musical-notes' : 'musical-notes-outline'}
                 size={21}
-                color={activeTab === 'player' ? '#FFF' : 'rgba(255,255,255,0.45)'}
+                color={activeTab === 'player' ? '#FFF' : 'rgba(255,255,255,0.42)'}
               />
               <Text style={[styles.dockTabText, activeTab === 'player' && styles.dockTabTextActive]}>
                 موزیک
@@ -560,7 +585,7 @@ export default function App() {
               <Ionicons
                 name={activeTab === 'pc' ? 'desktop' : 'desktop-outline'}
                 size={21}
-                color={activeTab === 'pc' ? '#FFF' : 'rgba(255,255,255,0.45)'}
+                color={activeTab === 'pc' ? '#FFF' : 'rgba(255,255,255,0.42)'}
               />
               <Text style={[styles.dockTabText, activeTab === 'pc' && styles.dockTabTextActive]}>
                 کنترل
@@ -575,7 +600,7 @@ export default function App() {
               <Ionicons
                 name={activeTab === 'files' ? 'cloud-upload' : 'cloud-upload-outline'}
                 size={21}
-                color={activeTab === 'files' ? '#FFF' : 'rgba(255,255,255,0.45)'}
+                color={activeTab === 'files' ? '#FFF' : 'rgba(255,255,255,0.42)'}
               />
               <Text style={[styles.dockTabText, activeTab === 'files' && styles.dockTabTextActive]}>
                 ارسال
@@ -585,12 +610,12 @@ export default function App() {
         </View>
       )}
 
-      {/* ===================== WELCOME ===================== */}
+      {/* ===================== WELCOME SCREEN ===================== */}
       {showWelcome && (
         <Animated.View style={[styles.welcomeScreen, { opacity: fadeAnim }]}>
           <Animated.View style={[styles.welcomeContent, { transform: [{ scale: scaleAnim }] }]}>
             <View style={styles.welcomeIconWrapper}>
-              <BlurView style={StyleSheet.absoluteFill} tint="light" intensity={60} />
+              <BlurView style={StyleSheet.absoluteFill} tint="systemThickMaterialLight" intensity={65} />
               <View style={styles.specularHairlineRound} pointerEvents="none" />
               <Ionicons name="play" size={54} color="#FFF" style={{ marginLeft: 6 }} />
             </View>
@@ -601,7 +626,7 @@ export default function App() {
             </Text>
 
             <TouchableOpacity activeOpacity={0.8} onPress={handleStartApp} style={styles.welcomeBtn}>
-              <BlurView style={StyleSheet.absoluteFill} tint="light" intensity={60} />
+              <BlurView style={StyleSheet.absoluteFill} tint="systemThickMaterialLight" intensity={65} />
               <View style={styles.specularHairlineRound} pointerEvents="none" />
               <Text style={styles.welcomeBtnText}>ورود به برنامه</Text>
               <Ionicons name="arrow-forward" size={18} color="#FFF" />
@@ -610,11 +635,11 @@ export default function App() {
         </Animated.View>
       )}
 
-      {/* ===================== شیت کشویی آرشیو ===================== */}
+      {/* ===================== ARCHIVE MODAL ===================== */}
       <Modal animationType="slide" transparent visible={isArchiveVisible}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalGlassCard}>
-            <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={90} />
+            <BlurView style={StyleSheet.absoluteFill} tint="systemChromeMaterialDark" intensity={95} />
             <View style={styles.specularHairlineTop} pointerEvents="none" />
             <View style={styles.modalDragHandle} />
             <View style={styles.modalHeader}>
@@ -634,11 +659,16 @@ export default function App() {
                 showsVerticalScrollIndicator={false}
                 keyExtractor={(item, index) => index.toString()}
                 renderItem={({ item }) => (
-                  <TouchableOpacity style={styles.archiveItem} onPress={() => sendFileToServer(item.uri, item.name)}>
+                  <TouchableOpacity
+                    style={styles.archiveItem}
+                    onPress={() => sendFileToServer(item.uri, item.name)}
+                  >
                     <View style={styles.archiveIconBox}>
                       <Ionicons name="musical-note" size={17} color="#FFF" />
                     </View>
-                    <Text numberOfLines={1} style={styles.archiveItemText}>{stripExt(item.name)}</Text>
+                    <Text numberOfLines={1} style={styles.archiveItemText}>
+                      {stripExt(item.name)}
+                    </Text>
                     <Ionicons name="play-circle-outline" size={24} color="rgba(255,255,255,0.5)" />
                   </TouchableOpacity>
                 )}
@@ -648,11 +678,14 @@ export default function App() {
         </View>
       </Modal>
 
-      {/* ===================== شیت کشویی تنظیمات ===================== */}
+      {/* ===================== SETTINGS MODAL ===================== */}
       <Modal animationType="slide" transparent visible={isSettingsVisible}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalGlassCard}>
-            <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={90} />
+            <BlurView style={StyleSheet.absoluteFill} tint="systemChromeMaterialDark" intensity={95} />
             <View style={styles.specularHairlineTop} pointerEvents="none" />
             <View style={styles.modalDragHandle} />
             <View style={styles.modalHeader}>
@@ -664,7 +697,12 @@ export default function App() {
             <View style={styles.settingsBody}>
               <Text style={styles.settingsLabel}>نشانی آی‌پی سرور محلی (IPv4)</Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="hardware-chip-outline" size={18} color="rgba(255,255,255,0.4)" style={styles.inputIcon} />
+                <Ionicons
+                  name="hardware-chip-outline"
+                  size={18}
+                  color="rgba(255,255,255,0.4)"
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   style={styles.input}
                   value={serverIP}
@@ -695,14 +733,45 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0B0B10' },
-  bgContainer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
-  bgBlob: { position: 'absolute', borderRadius: 999, opacity: 0.8 },
-  blob1: { backgroundColor: '#5E5CE6', top: -10, left: -40, width: 380, height: 380 },
-  blob2: { backgroundColor: '#FF2D55', bottom: 100, right: -50, width: 440, height: 440 },
-  blob3: { backgroundColor: '#32ADE6', top: '25%', left: '10%', width: 300, height: 300 },
+  container: {
+    flex: 1,
+    backgroundColor: '#0B0B10',
+  },
+  bgContainer: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  bgBlob: {
+    position: 'absolute',
+    borderRadius: 999,
+    opacity: 0.75,
+  },
+  blob1: {
+    backgroundColor: '#5E5CE6',
+    top: -10,
+    left: -40,
+    width: 380,
+    height: 380,
+  },
+  blob2: {
+    backgroundColor: '#FF2D55',
+    bottom: 100,
+    right: -50,
+    width: 440,
+    height: 440,
+  },
+  blob3: {
+    backgroundColor: '#32ADE6',
+    top: '25%',
+    left: '10%',
+    width: 300,
+    height: 300,
+  },
 
-  fullScroll: { flex: 1, width: '100%' },
+  fullScroll: {
+    flex: 1,
+    width: '100%',
+  },
   scrollContent: {
     paddingTop: Platform.OS === 'ios' ? 104 : 84,
     paddingHorizontal: '7.5%',
@@ -710,47 +779,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // استایل‌های تفکیک‌شده شعاع نوری
+  // ========== Specular Hairlines (Apple-style highlights) ==========
   specularHairlineRound: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.25)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.45)',
+    borderColor: 'rgba(255,255,255,0.18)',
+    borderTopWidth: 1.2,
+    borderTopColor: 'rgba(255,255,255,0.55)',
   },
   specularHairline28: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 28,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.25)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.45)',
+    borderColor: 'rgba(255,255,255,0.18)',
+    borderTopWidth: 1.2,
+    borderTopColor: 'rgba(255,255,255,0.55)',
   },
   specularHairline24: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 24,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.25)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.45)',
+    borderColor: 'rgba(255,255,255,0.18)',
+    borderTopWidth: 1.2,
+    borderTopColor: 'rgba(255,255,255,0.52)',
   },
   specularHairline20: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 20,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.25)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.45)',
+    borderColor: 'rgba(255,255,255,0.18)',
+    borderTopWidth: 1.2,
+    borderTopColor: 'rgba(255,255,255,0.52)',
   },
   specularHairlineTop: {
     ...StyleSheet.absoluteFillObject,
     borderTopLeftRadius: 36,
     borderTopRightRadius: 36,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.2)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.45)',
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderTopWidth: 1.2,
+    borderTopColor: 'rgba(255,255,255,0.5)',
     borderBottomWidth: 0,
   },
   specularHairlineDashed: {
@@ -758,9 +827,10 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1.2,
     borderStyle: 'dashed',
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: 'rgba(255,255,255,0.22)',
   },
 
+  // ========== Top Pill ==========
   topPillContainer: {
     position: 'absolute',
     alignSelf: 'center',
@@ -771,72 +841,153 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
   },
-  topPillText: { color: '#FFF', fontSize: 13, fontWeight: '700', marginLeft: 6, letterSpacing: 0.5 },
+  topPillText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
+    marginLeft: 6,
+    letterSpacing: 0.5,
+  },
 
-  header: { marginBottom: 24, alignSelf: 'center' },
-  headerText: { color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '800', letterSpacing: 3 },
+  // ========== Headers & Titles ==========
+  header: {
+    marginBottom: 24,
+    alignSelf: 'center',
+  },
+  headerText: {
+    color: 'rgba(255,255,255,0.42)',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 3,
+  },
 
-  artworkWrapper: { width: width * 0.74, height: width * 0.74, marginBottom: 30, justifyContent: 'center', alignItems: 'center' },
+  // ========== Artwork ==========
+  artworkWrapper: {
+    width: width * 0.74,
+    height: width * 0.74,
+    marginBottom: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   artworkGlow: {
     position: 'absolute',
-    width: '105%',
-    height: '105%',
-    borderRadius: 30,
+    width: '108%',
+    height: '108%',
+    borderRadius: 32,
     backgroundColor: '#FFFFFF',
     shadowColor: '#FFF',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 36,
+    shadowOpacity: 0.32,
+    shadowRadius: 40,
   },
   artworkContainer: {
     width: '100%',
     height: '100%',
     borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.45,
-    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 22 },
+    shadowOpacity: 0.5,
+    shadowRadius: 32,
     overflow: 'hidden',
   },
-  coverImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
 
-  infoContainer: { width: '100%', alignItems: 'center', marginBottom: 22 },
-  title: { fontSize: 22, fontWeight: '800', color: '#FFF', marginBottom: 6, textAlign: 'center', letterSpacing: -0.3 },
-  subtitle: { fontSize: 13, color: 'rgba(255,255,255,0.45)', fontWeight: '600', letterSpacing: 0.2 },
+  // ========== Track Info ==========
+  infoContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 22,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFF',
+    marginBottom: 6,
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.42)',
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
 
-  sliderContainer: { width: '100%', marginBottom: 16 },
-  slider: { width: '100%', height: 28 },
-  timeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2, paddingHorizontal: 4 },
-  timeText: { fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: '600', fontVariant: ['tabular-nums'] },
+  // ========== Sliders ==========
+  sliderContainer: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  slider: {
+    width: '100%',
+    height: 28,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 2,
+    paddingHorizontal: 4,
+  },
+  timeText: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.42)',
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
 
-  controls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', width: '100%', marginBottom: 22 },
-  controlIcon: { padding: 14, marginHorizontal: 22 },
+  // ========== Controls ==========
+  controls: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 22,
+  },
+  controlIcon: {
+    padding: 14,
+    marginHorizontal: 22,
+  },
   playBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 22,
   },
 
-  volumeRow: { flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 22 },
-  volSlider: { flex: 1, marginHorizontal: 12, height: 28 },
+  // ========== Volume ==========
+  volumeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 22,
+  },
+  volSlider: {
+    flex: 1,
+    marginHorizontal: 12,
+    height: 28,
+  },
 
+  // ========== Glass Action Button ==========
   glassActionBtn: {
     width: '100%',
     borderRadius: 20,
@@ -845,19 +996,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingVertical: 15,
+    backgroundColor: 'rgba(255,255,255,0.04)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
   },
-  glassActionBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14, marginLeft: 8 },
-  archiveLinkBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
-  archiveLinkText: { color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '600', marginLeft: 4 },
+  glassActionBtnText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  archiveLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  archiveLinkText: {
+    color: 'rgba(255,255,255,0.48)',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
 
-  pcTitle: { fontSize: 26, fontWeight: '800', color: '#FFF', marginBottom: 6, alignSelf: 'flex-start', letterSpacing: -0.5 },
-  pcSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 26, alignSelf: 'flex-start', textAlign: 'right' },
+  // ========== PC Control ==========
+  pcTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#FFF',
+    marginBottom: 6,
+    alignSelf: 'flex-start',
+    letterSpacing: -0.5,
+  },
+  pcSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.42)',
+    marginBottom: 26,
+    alignSelf: 'flex-start',
+    textAlign: 'right',
+  },
   pcCard: {
     width: '100%',
     borderRadius: 24,
@@ -866,19 +1045,49 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 18,
   },
-  pcIconBox: { width: 48, height: 48, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginLeft: 14 },
-  pcCardTitle: { color: '#FFF', fontSize: 15, fontWeight: '700', textAlign: 'right', marginBottom: 2 },
-  pcCardDesc: { color: 'rgba(255,255,255,0.45)', fontSize: 12, textAlign: 'right' },
-  pcCancelBtn: { marginTop: 12, paddingVertical: 8 },
-  pcCancelText: { color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  pcIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 14,
+  },
+  pcCardTitle: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'right',
+    marginBottom: 2,
+  },
+  pcCardDesc: {
+    color: 'rgba(255,255,255,0.42)',
+    fontSize: 12,
+    textAlign: 'right',
+  },
+  pcCancelBtn: {
+    marginTop: 12,
+    paddingVertical: 8,
+  },
+  pcCancelText: {
+    color: 'rgba(255,255,255,0.38)',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 
-  uploadZoneWrapper: { width: '100%', marginTop: 8, marginBottom: 24 },
+  // ========== Upload Zone ==========
+  uploadZoneWrapper: {
+    width: '100%',
+    marginTop: 8,
+    marginBottom: 24,
+  },
   uploadZone: {
     width: '100%',
     height: 220,
@@ -887,11 +1096,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
   },
   uploadIconCircle: {
     width: 68,
@@ -902,12 +1111,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  uploadHintText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600' },
-  lastUploadedText: { color: 'rgba(255,255,255,0.35)', fontSize: 12, marginTop: 8 },
-  uploadStatusText: { color: '#FFF', fontSize: 15, fontWeight: '700', marginTop: 12 },
-  progressTrack: { width: '80%', height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.12)', marginTop: 14, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#FFF', borderRadius: 2.5 },
+  uploadHintText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  lastUploadedText: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 12,
+    marginTop: 8,
+  },
+  uploadStatusText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 12,
+  },
+  progressTrack: {
+    width: '80%',
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    marginTop: 14,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#FFF',
+    borderRadius: 2.5,
+  },
 
+  // ========== Floating Dock ==========
   floatingBarWrapper: {
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 32 : 20,
@@ -925,11 +1159,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
   },
   capsuleGlassDock: {
     flex: 1,
@@ -941,11 +1175,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 8,
     marginRight: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
   },
   dockTabItem: {
     flex: 1,
@@ -956,7 +1190,7 @@ const styles = StyleSheet.create({
   dockTabText: {
     fontSize: 10,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(255,255,255,0.42)',
     marginTop: 2,
   },
   dockTabTextActive: {
@@ -964,13 +1198,17 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  // ========== Welcome ==========
   welcomeScreen: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 99999,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  welcomeContent: { alignItems: 'center', paddingHorizontal: 40 },
+  welcomeContent: {
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
   welcomeIconWrapper: {
     width: 110,
     height: 110,
@@ -979,14 +1217,27 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     shadowColor: '#FFF',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.25,
-    shadowRadius: 28,
+    shadowRadius: 32,
   },
-  welcomeTitle: { fontSize: 34, fontWeight: '900', color: '#FFF', marginBottom: 12, letterSpacing: -0.5 },
-  welcomeSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center', lineHeight: 22, marginBottom: 44, fontWeight: '500' },
+  welcomeTitle: {
+    fontSize: 34,
+    fontWeight: '900',
+    color: '#FFF',
+    marginBottom: 12,
+    letterSpacing: -0.5,
+  },
+  welcomeSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.48)',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 44,
+    fontWeight: '500',
+  },
   welcomeBtn: {
     width: 190,
     height: 56,
@@ -995,15 +1246,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
   },
-  welcomeBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700', marginRight: 8 },
+  welcomeBtnText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+    marginRight: 8,
+  },
 
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+  // ========== Modals ==========
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
   modalGlassCard: {
     height: '62%',
     width: '100%',
@@ -1013,41 +1274,111 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 32,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
-  modalDragHandle: { width: 36, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.3)', alignSelf: 'center', marginBottom: 20 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 },
-  modalTitle: { fontSize: 22, fontWeight: '800', color: '#FFF' },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 40 },
-  emptyText: { marginTop: 14, fontSize: 15, color: 'rgba(255,255,255,0.35)', fontWeight: '600' },
+  modalDragHandle: {
+    width: 36,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: 'rgba(255,255,255,0.28)',
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 22,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 40,
+  },
+  emptyText: {
+    marginTop: 14,
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.32)',
+    fontWeight: '600',
+  },
   archiveItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.07)',
     padding: 12,
     borderRadius: 18,
     marginBottom: 10,
     borderWidth: 0.8,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  archiveIconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,42,84,0.7)', justifyContent: 'center', alignItems: 'center' },
-  archiveItemText: { flex: 1, marginHorizontal: 14, fontSize: 15, fontWeight: '600', color: '#FFF' },
-  settingsBody: { flex: 1, marginTop: 8 },
-  settingsLabel: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.5)', marginBottom: 8, marginLeft: 4 },
+  archiveIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,42,84,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  archiveItemText: {
+    flex: 1,
+    marginHorizontal: 14,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  settingsBody: {
+    flex: 1,
+    marginTop: 8,
+  },
+  settingsLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.48)',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.07)',
     borderRadius: 18,
     paddingHorizontal: 14,
     marginBottom: 12,
     borderWidth: 0.8,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
-  inputIcon: { marginRight: 8 },
-  input: { flex: 1, paddingVertical: 16, fontSize: 17, fontWeight: '600', color: '#FFF', letterSpacing: 1.5 },
-  settingsHint: { fontSize: 12, color: 'rgba(255,255,255,0.35)', lineHeight: 20, textAlign: 'justify', paddingHorizontal: 4 },
+  inputIcon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 16,
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#FFF',
+    letterSpacing: 1.5,
+  },
+  settingsHint: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.32)',
+    lineHeight: 20,
+    textAlign: 'justify',
+    paddingHorizontal: 4,
+  },
   appleActionBtn: {
     backgroundColor: '#FFFFFF',
     paddingVertical: 18,
@@ -1058,5 +1389,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
   },
-  appleActionBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+  appleActionBtnText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: '700',
+  },
 });
