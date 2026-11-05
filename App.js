@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import DocumentPicker, { types } from 'react-native-document-picker';
 import RNFS from 'react-native-fs';
-import { BlurView } from 'expo-blur'; // موتور بلر اصلی و تضمینی
+import { BlurView } from 'expo-blur';
 import Slider from '@react-native-community/slider';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -37,7 +37,6 @@ const formatTime = (secs) => {
 const stripExt = (name) => (name || '').replace(/\.[^/.]+$/, '');
 
 export default function App() {
-  // ----- Global -----
   const [showWelcome, setShowWelcome] = useState(true);
   const [activeTab, setActiveTab] = useState('player');
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -50,7 +49,6 @@ export default function App() {
   const [isSettingsVisible, setSettingsVisible] = useState(false);
   const SERVER_URL = `http://${serverIP}:5000`;
 
-  // ----- Player -----
   const [loading, setLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [trackName, setTrackName] = useState('هیچ موزیکی در حال پخش نیست');
@@ -63,15 +61,12 @@ export default function App() {
   const isSliding = useRef(false);
   const slideTimeout = useRef(null);
 
-  // ----- File transfer -----
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [lastUploaded, setLastUploaded] = useState(null);
 
-  // ----- PC control -----
   const [pcBusy, setPcBusy] = useState(false);
 
-  // ----- Effects -----
   useEffect(() => {
     Animated.spring(scaleAnim, { toValue: 1, tension: 40, friction: 7, useNativeDriver: true }).start();
     Animated.loop(
@@ -120,7 +115,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [serverIP, showWelcome]);
 
-  // ----- Player functions -----
   const sendFileToServer = async (uri, name) => {
     setLoading(true);
     setArchiveVisible(false);
@@ -201,7 +195,6 @@ export default function App() {
 
   const coverUrl = `${SERVER_URL}/cover?t=${encodeURIComponent(trackName)}`;
 
-  // ----- File transfer -----
   const pickAndSendFile = async () => {
     try {
       const file = await DocumentPicker.pickSingle({
@@ -252,7 +245,6 @@ export default function App() {
     }
   };
 
-  // ----- PC control -----
   const callSystemAction = (action, label, confirmMsg) => {
     Alert.alert(label, confirmMsg, [
       { text: 'انصراف', style: 'cancel' },
@@ -289,18 +281,17 @@ export default function App() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* پس‌زمینه رنگی واضح‌تر برای دیده شدن افکت شیشه */}
       <View style={styles.bgContainer}>
         <Animated.View style={[styles.bgBlob, styles.blob1, { transform: [{ translateY: blob1TranslateY }] }]} />
         <Animated.View style={[styles.bgBlob, styles.blob2, { transform: [{ translateX: blob2TranslateX }] }]} />
         <Animated.View style={[styles.bgBlob, styles.blob3, { transform: [{ scale: blob3Scale }] }]} />
       </View>
 
-      {/* Top Pill شناور بالای صفحه */}
+      {/* Top Pill / borderRadius: 20 */}
       {!showWelcome && (
         <Animated.View style={[styles.topPillContainer, { transform: [{ translateY: pillDropAnim }] }]}>
           <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={70} />
-          <View style={styles.specularHairline} pointerEvents="none" />
+          <View style={styles.specularHairline20} pointerEvents="none" />
           <Ionicons
             name={activeTab === 'player' ? 'musical-notes' : activeTab === 'pc' ? 'desktop' : 'cloud-upload'}
             size={13}
@@ -329,7 +320,7 @@ export default function App() {
               ) : (
                 <Ionicons name="musical-notes" size={82} color="rgba(255,255,255,0.25)" />
               )}
-              <View style={styles.specularHairline} pointerEvents="none" />
+              <View style={styles.specularHairline28} pointerEvents="none" />
             </View>
           </View>
 
@@ -364,7 +355,7 @@ export default function App() {
 
             <TouchableOpacity activeOpacity={0.75} onPress={togglePause} style={styles.playBtn}>
               <BlurView style={StyleSheet.absoluteFill} tint="light" intensity={40} />
-              <View style={styles.specularHairline} pointerEvents="none" />
+              <View style={styles.specularHairlineRound} pointerEvents="none" />
               {loading ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
@@ -392,9 +383,10 @@ export default function App() {
             <Ionicons name="volume-high" size={17} color="rgba(255,255,255,0.4)" />
           </View>
 
+          {/* glassActionBtn / borderRadius: 20 */}
           <TouchableOpacity style={styles.glassActionBtn} onPress={pickAndPlayMusic} activeOpacity={0.75}>
             <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={60} />
-            <View style={styles.specularHairline} pointerEvents="none" />
+            <View style={styles.specularHairline20} pointerEvents="none" />
             <Ionicons name="add" size={20} color="#FFF" />
             <Text style={styles.glassActionBtnText}>افزودن قطعه صوتی</Text>
           </TouchableOpacity>
@@ -417,6 +409,7 @@ export default function App() {
           <Text style={styles.pcTitle}>کنترل سیستم</Text>
           <Text style={styles.pcSubtitle}>مدیریت بی‌درنگ وضعیت سخت‌افزار</Text>
 
+          {/* pcCard / borderRadius: 24 */}
           <TouchableOpacity
             style={styles.pcCard}
             disabled={pcBusy}
@@ -424,7 +417,7 @@ export default function App() {
             onPress={() => callSystemAction('sleep', 'حالت اسلیپ', 'سیستم به حالت خواب برود؟')}
           >
             <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={70} />
-            <View style={styles.specularHairline} pointerEvents="none" />
+            <View style={styles.specularHairline24} pointerEvents="none" />
             <View style={[styles.pcIconBox, { backgroundColor: 'rgba(94,92,230,0.3)' }]}>
               <Ionicons name="moon" size={24} color="#8D8AFF" />
             </View>
@@ -442,7 +435,7 @@ export default function App() {
             onPress={() => callSystemAction('restart', 'ری‌استارت', 'سیستم مجدداً راه‌اندازی شود؟')}
           >
             <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={70} />
-            <View style={styles.specularHairline} pointerEvents="none" />
+            <View style={styles.specularHairline24} pointerEvents="none" />
             <View style={[styles.pcIconBox, { backgroundColor: 'rgba(50,173,230,0.3)' }]}>
               <Ionicons name="refresh" size={24} color="#64D2FF" />
             </View>
@@ -460,7 +453,7 @@ export default function App() {
             onPress={() => callSystemAction('shutdown', 'خاموشی', 'سیستم خاموش شود؟')}
           >
             <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={70} />
-            <View style={styles.specularHairline} pointerEvents="none" />
+            <View style={styles.specularHairline24} pointerEvents="none" />
             <View style={[styles.pcIconBox, { backgroundColor: 'rgba(255,69,58,0.3)' }]}>
               <Ionicons name="power" size={24} color="#FF6961" />
             </View>
@@ -516,34 +509,33 @@ export default function App() {
             </View>
           </View>
 
+          {/* glassActionBtn / borderRadius: 20 */}
           <TouchableOpacity style={styles.glassActionBtn} onPress={pickAndSendFile} disabled={uploading} activeOpacity={0.75}>
             <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={70} />
-            <View style={styles.specularHairline} pointerEvents="none" />
+            <View style={styles.specularHairline20} pointerEvents="none" />
             <Ionicons name="document-text" size={19} color="#FFF" />
             <Text style={styles.glassActionBtnText}>انتخاب و انتقال فایل</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
 
-      {/* ===================== داک شناور دو تکه شیشه‌ای دقیقاً مثل ویدیو ===================== */}
+      {/* ===================== داک شناور دو تکه شیشه‌ای ===================== */}
       {!showWelcome && (
         <View style={styles.floatingBarWrapper} pointerEvents="box-none">
           
-          {/* دکمه دایره‌ای تنظیمات (سمت چپ) */}
           <TouchableOpacity
             style={styles.circleGlassBtn}
             onPress={() => setSettingsVisible(true)}
             activeOpacity={0.7}
           >
             <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={80} />
-            <View style={styles.specularHairline} pointerEvents="none" />
+            <View style={styles.specularHairlineRound} pointerEvents="none" />
             <Ionicons name="settings-outline" size={22} color="#FFF" />
           </TouchableOpacity>
 
-          {/* کپسول تب‌ها (سمت راست) */}
           <View style={styles.capsuleGlassDock}>
             <BlurView style={StyleSheet.absoluteFill} tint="dark" intensity={80} />
-            <View style={styles.specularHairline} pointerEvents="none" />
+            <View style={styles.specularHairlineRound} pointerEvents="none" />
 
             <TouchableOpacity
               style={styles.dockTabItem}
@@ -599,7 +591,7 @@ export default function App() {
           <Animated.View style={[styles.welcomeContent, { transform: [{ scale: scaleAnim }] }]}>
             <View style={styles.welcomeIconWrapper}>
               <BlurView style={StyleSheet.absoluteFill} tint="light" intensity={60} />
-              <View style={styles.specularHairline} pointerEvents="none" />
+              <View style={styles.specularHairlineRound} pointerEvents="none" />
               <Ionicons name="play" size={54} color="#FFF" style={{ marginLeft: 6 }} />
             </View>
 
@@ -610,7 +602,7 @@ export default function App() {
 
             <TouchableOpacity activeOpacity={0.8} onPress={handleStartApp} style={styles.welcomeBtn}>
               <BlurView style={StyleSheet.absoluteFill} tint="light" intensity={60} />
-              <View style={styles.specularHairline} pointerEvents="none" />
+              <View style={styles.specularHairlineRound} pointerEvents="none" />
               <Text style={styles.welcomeBtnText}>ورود به برنامه</Text>
               <Ionicons name="arrow-forward" size={18} color="#FFF" />
             </TouchableOpacity>
@@ -705,7 +697,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0B0B10' },
   bgContainer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
-  // شفافیت و رنگ حباب‌ها رو زیاد کردم تا بلر کاملاً زنده باشه
   bgBlob: { position: 'absolute', borderRadius: 999, opacity: 0.8 },
   blob1: { backgroundColor: '#5E5CE6', top: -10, left: -40, width: 380, height: 380 },
   blob2: { backgroundColor: '#FF2D55', bottom: 100, right: -50, width: 440, height: 440 },
@@ -715,17 +706,42 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: Platform.OS === 'ios' ? 104 : 84,
     paddingHorizontal: '7.5%',
-    paddingBottom: 130, // باز گذاشتن انتهای صفحه برای اسکرول زیر داک شیشه‌ای
+    paddingBottom: 130,
     alignItems: 'center',
   },
 
-  specularHairline: {
+  // استایل‌های تفکیک‌شده شعاع نوری
+  specularHairlineRound: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.25)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.45)', // درخشش لبه بالایی شیشه
+    borderTopColor: 'rgba(255,255,255,0.45)',
+  },
+  specularHairline28: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 28,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.25)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.45)',
+  },
+  specularHairline24: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.25)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.45)',
+  },
+  specularHairline20: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.25)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.45)',
   },
   specularHairlineTop: {
     ...StyleSheet.absoluteFillObject,
@@ -892,13 +908,12 @@ const styles = StyleSheet.create({
   progressTrack: { width: '80%', height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.12)', marginTop: 14, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: '#FFF', borderRadius: 2.5 },
 
-  // ==================== استایل داک دو تکه شیشه‌ای (دایره + کپسول) ====================
   floatingBarWrapper: {
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 32 : 20,
     left: 20,
     right: 20,
-    flexDirection: 'row-reverse', // کپسول راست، دایره چپ
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 999,
@@ -925,7 +940,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingHorizontal: 8,
-    marginRight: 12, // فاصله بین کپسول و دایره
+    marginRight: 12,
     backgroundColor: 'rgba(255,255,255,0.06)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
