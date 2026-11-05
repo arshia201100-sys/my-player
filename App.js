@@ -289,22 +289,23 @@ export default function App() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* حباب‌های رنگی متحرک در عمق پس‌زمینه */}
+      {/* حباب‌های رنگی متحرک پس‌زمینه */}
       <View style={styles.bgContainer}>
         <Animated.View style={[styles.bgBlob, styles.blob1, { transform: [{ translateY: blob1TranslateY }] }]} />
         <Animated.View style={[styles.bgBlob, styles.blob2, { transform: [{ translateX: blob2TranslateX }] }]} />
         <Animated.View style={[styles.bgBlob, styles.blob3, { transform: [{ scale: blob3Scale }] }]} />
+        {/* هاله اختصاصی مایع دقیقاً پشت منوی پایین برای درخشش شیشه‌ای */}
+        <View style={styles.dockUnderglow} />
       </View>
 
-      {/* شیشه اصلی پشت کل صفحه */}
-      <BlurView style={StyleSheet.absoluteFill} blurType="dark" blurAmount={30} />
+      <BlurView style={StyleSheet.absoluteFill} blurType="dark" blurAmount={25} />
       <View style={styles.glassSheen} pointerEvents="none" />
 
-      {/* کپسول بالای صفحه (Top Dynamic Pill) */}
+      {/* Dynamic Pill شناور بالای صفحه */}
       {!showWelcome && (
         <Animated.View style={[styles.topPillContainer, { transform: [{ translateY: pillDropAnim }] }]}>
-          <BlurView style={StyleSheet.absoluteFill} blurType="chromeMaterialDark" blurAmount={20} />
-          <View style={styles.specularHairline} pointerEvents="none" />
+          <BlurView style={StyleSheet.absoluteFill} blurType="ultraThinMaterialDark" blurAmount={20} />
+          <View style={styles.glassHighlight} pointerEvents="none" />
           <Ionicons
             name={activeTab === 'player' ? 'musical-notes' : activeTab === 'pc' ? 'desktop' : 'cloud-upload'}
             size={13}
@@ -316,7 +317,7 @@ export default function App() {
         </Animated.View>
       )}
 
-      {/* ===================== تب پخش موزیک ===================== */}
+      {/* ===================== PLAYER TAB ===================== */}
       {!showWelcome && activeTab === 'player' && (
         <View style={styles.safeArea}>
           <View style={styles.header}><Text style={styles.headerText}>NOW PLAYING</Text></View>
@@ -329,7 +330,7 @@ export default function App() {
               ) : (
                 <Ionicons name="musical-notes" size={82} color="rgba(255,255,255,0.25)" />
               )}
-              <View style={styles.specularHairline} pointerEvents="none" />
+              <View style={styles.glassHighlight} pointerEvents="none" />
             </View>
           </View>
 
@@ -364,7 +365,7 @@ export default function App() {
 
             <TouchableOpacity activeOpacity={0.75} onPress={togglePause} style={styles.playBtn}>
               <BlurView style={StyleSheet.absoluteFill} blurType="ultraThinMaterialLight" blurAmount={25} />
-              <View style={styles.specularHairline} pointerEvents="none" />
+              <View style={styles.glassHighlight} pointerEvents="none" />
               {loading ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
@@ -393,8 +394,8 @@ export default function App() {
           </View>
 
           <TouchableOpacity style={styles.appleGlassBtn} onPress={pickAndPlayMusic} activeOpacity={0.75}>
-            <BlurView style={StyleSheet.absoluteFill} blurType="thinMaterialDark" blurAmount={20} />
-            <View style={styles.specularHairline} pointerEvents="none" />
+            <BlurView style={StyleSheet.absoluteFill} blurType="ultraThinMaterialDark" blurAmount={20} />
+            <View style={styles.glassHighlight} pointerEvents="none" />
             <Ionicons name="add" size={20} color="#FFF" />
             <Text style={styles.appleGlassBtnText}>افزودن قطعه صوتی</Text>
           </TouchableOpacity>
@@ -406,7 +407,7 @@ export default function App() {
         </View>
       )}
 
-      {/* ===================== تب کنترل سیستم ===================== */}
+      {/* ===================== PC CONTROL TAB ===================== */}
       {!showWelcome && activeTab === 'pc' && (
         <ScrollView
           style={styles.safeAreaScroll}
@@ -423,8 +424,8 @@ export default function App() {
             activeOpacity={0.75}
             onPress={() => callSystemAction('sleep', 'حالت اسلیپ', 'سیستم به حالت خواب برود؟')}
           >
-            <BlurView style={StyleSheet.absoluteFill} blurType="thinMaterialDark" blurAmount={20} />
-            <View style={styles.specularHairline} pointerEvents="none" />
+            <BlurView style={StyleSheet.absoluteFill} blurType="ultraThinMaterialDark" blurAmount={20} />
+            <View style={styles.glassHighlight} pointerEvents="none" />
             <View style={[styles.pcIconBox, { backgroundColor: 'rgba(94,92,230,0.25)' }]}>
               <Ionicons name="moon" size={24} color="#8D8AFF" />
             </View>
@@ -441,8 +442,8 @@ export default function App() {
             activeOpacity={0.75}
             onPress={() => callSystemAction('restart', 'ری‌استارت', 'سیستم مجدداً راه‌اندازی شود؟')}
           >
-            <BlurView style={StyleSheet.absoluteFill} blurType="thinMaterialDark" blurAmount={20} />
-            <View style={styles.specularHairline} pointerEvents="none" />
+            <BlurView style={StyleSheet.absoluteFill} blurType="ultraThinMaterialDark" blurAmount={20} />
+            <View style={styles.glassHighlight} pointerEvents="none" />
             <View style={[styles.pcIconBox, { backgroundColor: 'rgba(50,173,230,0.25)' }]}>
               <Ionicons name="refresh" size={24} color="#64D2FF" />
             </View>
@@ -459,8 +460,8 @@ export default function App() {
             activeOpacity={0.75}
             onPress={() => callSystemAction('shutdown', 'خاموشی', 'سیستم خاموش شود؟')}
           >
-            <BlurView style={StyleSheet.absoluteFill} blurType="thinMaterialDark" blurAmount={20} />
-            <View style={styles.specularHairline} pointerEvents="none" />
+            <BlurView style={StyleSheet.absoluteFill} blurType="ultraThinMaterialDark" blurAmount={20} />
+            <View style={styles.glassHighlight} pointerEvents="none" />
             <View style={[styles.pcIconBox, { backgroundColor: 'rgba(255,69,58,0.25)' }]}>
               <Ionicons name="power" size={24} color="#FF6961" />
             </View>
@@ -477,7 +478,7 @@ export default function App() {
         </ScrollView>
       )}
 
-      {/* ===================== تب ارسال فایل ===================== */}
+      {/* ===================== FILE TRANSFER TAB ===================== */}
       {!showWelcome && activeTab === 'files' && (
         <View style={styles.safeArea}>
           <View style={styles.header}><Text style={styles.headerText}>AIR TRANSFER</Text></View>
@@ -486,8 +487,8 @@ export default function App() {
 
           <View style={styles.uploadZoneWrapper}>
             <View style={styles.uploadZone}>
-              <BlurView style={StyleSheet.absoluteFill} blurType="thinMaterialDark" blurAmount={20} />
-              <View style={styles.specularHairlineDashed} pointerEvents="none" />
+              <BlurView style={StyleSheet.absoluteFill} blurType="ultraThinMaterialDark" blurAmount={20} />
+              <View style={styles.glassHighlightDashed} pointerEvents="none" />
               {uploading ? (
                 <>
                   <ActivityIndicator size="large" color="#FFF" />
@@ -513,58 +514,74 @@ export default function App() {
           </View>
 
           <TouchableOpacity style={styles.appleGlassBtn} onPress={pickAndSendFile} disabled={uploading} activeOpacity={0.75}>
-            <BlurView style={StyleSheet.absoluteFill} blurType="thinMaterialDark" blurAmount={20} />
-            <View style={styles.specularHairline} pointerEvents="none" />
+            <BlurView style={StyleSheet.absoluteFill} blurType="ultraThinMaterialDark" blurAmount={20} />
+            <View style={styles.glassHighlight} pointerEvents="none" />
             <Ionicons name="document-text" size={19} color="#FFF" />
             <Text style={styles.appleGlassBtnText}>انتخاب و انتقال فایل</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* ===================== بار شناور پایین (Floating Dock) ===================== */}
+      {/* ===================== منوی شیشه‌ای پایینی (LIQUID GLASS DOCK) ===================== */}
       {!showWelcome && (
         <View style={styles.dockContainer}>
-          <View style={styles.dockBlur}>
-            <BlurView style={StyleSheet.absoluteFill} blurType="chromeMaterialDark" blurAmount={30} />
-            <View style={styles.specularHairline} pointerEvents="none" />
-            <TouchableOpacity style={styles.dockItem} onPress={() => setActiveTab('player')}>
+          <View style={styles.liquidDock}>
+            {/* لایه بلر شیشه فوق شفاف اپل */}
+            <BlurView style={StyleSheet.absoluteFill} blurType="ultraThinMaterialDark" blurAmount={35} />
+            {/* لایه شکست نوری شیشه (Glass Gloss & Sheen) */}
+            <View style={styles.glassDockSheen} pointerEvents="none" />
+            <View style={styles.glassDockBorder} pointerEvents="none" />
+
+            <TouchableOpacity
+              style={[styles.dockItem, activeTab === 'player' && styles.dockItemActive]}
+              onPress={() => setActiveTab('player')}
+              activeOpacity={0.7}
+            >
               <Ionicons
                 name={activeTab === 'player' ? 'musical-notes' : 'musical-notes-outline'}
-                size={23}
-                color={activeTab === 'player' ? '#FFF' : 'rgba(255,255,255,0.38)'}
+                size={22}
+                color={activeTab === 'player' ? '#FFF' : 'rgba(255,255,255,0.45)'}
               />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.dockItem} onPress={() => setActiveTab('pc')}>
+            <TouchableOpacity
+              style={[styles.dockItem, activeTab === 'pc' && styles.dockItemActive]}
+              onPress={() => setActiveTab('pc')}
+              activeOpacity={0.7}
+            >
               <Ionicons
                 name={activeTab === 'pc' ? 'desktop' : 'desktop-outline'}
-                size={23}
-                color={activeTab === 'pc' ? '#FFF' : 'rgba(255,255,255,0.38)'}
+                size={22}
+                color={activeTab === 'pc' ? '#FFF' : 'rgba(255,255,255,0.45)'}
               />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.dockItem} onPress={() => setActiveTab('files')}>
+            <TouchableOpacity
+              style={[styles.dockItem, activeTab === 'files' && styles.dockItemActive]}
+              onPress={() => setActiveTab('files')}
+              activeOpacity={0.7}
+            >
               <Ionicons
                 name={activeTab === 'files' ? 'cloud-upload' : 'cloud-upload-outline'}
-                size={23}
-                color={activeTab === 'files' ? '#FFF' : 'rgba(255,255,255,0.38)'}
+                size={22}
+                color={activeTab === 'files' ? '#FFF' : 'rgba(255,255,255,0.45)'}
               />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.dockItem} onPress={() => setSettingsVisible(true)}>
-              <Ionicons name="settings-outline" size={23} color="rgba(255,255,255,0.7)" />
+            <TouchableOpacity style={styles.dockItem} onPress={() => setSettingsVisible(true)} activeOpacity={0.7}>
+              <Ionicons name="settings-outline" size={22} color="rgba(255,255,255,0.7)" />
             </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* ===================== صفحه شروع (Welcome) ===================== */}
+      {/* ===================== WELCOME SCREEN ===================== */}
       {showWelcome && (
         <Animated.View style={[styles.welcomeScreen, { opacity: fadeAnim }]}>
           <Animated.View style={[styles.welcomeContent, { transform: [{ scale: scaleAnim }] }]}>
             <View style={styles.welcomeIconWrapper}>
-              <BlurView style={StyleSheet.absoluteFill} blurType="chromeMaterialDark" blurAmount={25} />
-              <View style={styles.specularHairline} pointerEvents="none" />
+              <BlurView style={StyleSheet.absoluteFill} blurType="ultraThinMaterialLight" blurAmount={30} />
+              <View style={styles.glassHighlight} pointerEvents="none" />
               <Ionicons name="play" size={54} color="#FFF" style={{ marginLeft: 6 }} />
             </View>
 
@@ -575,7 +592,7 @@ export default function App() {
 
             <TouchableOpacity activeOpacity={0.8} onPress={handleStartApp} style={styles.welcomeBtn}>
               <BlurView style={StyleSheet.absoluteFill} blurType="ultraThinMaterialLight" blurAmount={25} />
-              <View style={styles.specularHairline} pointerEvents="none" />
+              <View style={styles.glassHighlight} pointerEvents="none" />
               <Text style={styles.welcomeBtnText}>ورود به برنامه</Text>
               <Ionicons name="arrow-forward" size={18} color="#FFF" />
             </TouchableOpacity>
@@ -583,12 +600,12 @@ export default function App() {
         </Animated.View>
       )}
 
-      {/* ===================== مودال آرشیو ===================== */}
+      {/* ===================== منوی شیشه‌ای کشویی آرشیو ===================== */}
       <Modal animationType="slide" transparent visible={isArchiveVisible}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <BlurView style={StyleSheet.absoluteFill} blurType="materialDark" blurAmount={30} />
-            <View style={styles.specularHairlineTop} pointerEvents="none" />
+          <View style={styles.modalGlassCard}>
+            <BlurView style={StyleSheet.absoluteFill} blurType="ultraThinMaterialDark" blurAmount={40} />
+            <View style={styles.glassTopLip} pointerEvents="none" />
             <View style={styles.modalDragHandle} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>آرشیو قطعات صوتی</Text>
@@ -621,12 +638,12 @@ export default function App() {
         </View>
       </Modal>
 
-      {/* ===================== مودال تنظیمات ===================== */}
+      {/* ===================== منوی شیشه‌ای کشویی تنظیمات ===================== */}
       <Modal animationType="slide" transparent visible={isSettingsVisible}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <BlurView style={StyleSheet.absoluteFill} blurType="materialDark" blurAmount={30} />
-            <View style={styles.specularHairlineTop} pointerEvents="none" />
+          <View style={styles.modalGlassCard}>
+            <BlurView style={StyleSheet.absoluteFill} blurType="ultraThinMaterialDark" blurAmount={40} />
+            <View style={styles.glassTopLip} pointerEvents="none" />
             <View style={styles.modalDragHandle} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>پیکربندی شبکه</Text>
@@ -648,7 +665,7 @@ export default function App() {
                 />
               </View>
               <Text style={styles.settingsHint}>
-                پورت پیش‌فرض ۵۰۰۰ است. هر دو دستگاه باید به یک مودم یا وای‌فای مشترک متصل باشند.
+                پورت پیش‌فرض ۵۰۰۰ است. هر دو دستگاه باید به یک روتر متصل باشند.
               </Text>
             </View>
             <TouchableOpacity
@@ -670,32 +687,41 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   bgContainer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden', backgroundColor: '#06060A' },
-  bgBlob: { position: 'absolute', borderRadius: 999, opacity: 0.6 },
+  bgBlob: { position: 'absolute', borderRadius: 999, opacity: 0.65 },
   blob1: { backgroundColor: '#5E5CE6', top: -80, left: -90, width: 440, height: 440 },
   blob2: { backgroundColor: '#E02D58', bottom: 120, right: -120, width: 500, height: 500 },
   blob3: { backgroundColor: '#007AFF', top: '30%', left: '10%', width: 340, height: 340 },
+
+  // هاله نوری شیشه‌ساز در پایین صفحه
+  dockUnderglow: {
+    position: 'absolute',
+    bottom: -30,
+    alignSelf: 'center',
+    width: 280,
+    height: 120,
+    borderRadius: 999,
+    backgroundColor: 'rgba(94, 92, 230, 0.45)',
+    shadowColor: '#5E5CE6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 50,
+  },
+
   glassSheen: { position: 'absolute', top: 0, left: 0, right: 0, height: height * 0.4, backgroundColor: 'rgba(255,255,255,0.03)' },
 
-  specularHairline: {
+  glassHighlight: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.28)',
-  },
-  specularHairlineTop: {
-    ...StyleSheet.absoluteFillObject,
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 36,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.22)',
-    borderBottomWidth: 0,
+    borderTopColor: 'rgba(255,255,255,0.5)',
   },
-  specularHairlineDashed: {
+  glassHighlightDashed: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 24,
     borderWidth: 1.2,
     borderStyle: 'dashed',
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: 'rgba(255,255,255,0.28)',
   },
 
   topPillContainer: {
@@ -708,6 +734,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 20,
     overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
@@ -765,6 +792,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.35,
@@ -783,6 +811,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
@@ -803,6 +832,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'center',
     padding: 18,
+    backgroundColor: 'rgba(255,255,255,0.06)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
@@ -823,6 +853,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
@@ -832,7 +863,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
@@ -843,28 +874,56 @@ const styles = StyleSheet.create({
   progressTrack: { width: '80%', height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.12)', marginTop: 14, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: '#FFF', borderRadius: 2.5 },
 
+  // ==================== استایل داک شیشه‌ای اپل ====================
   dockContainer: {
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 28 : 18,
     width: '100%',
     alignItems: 'center',
-    zIndex: 10,
+    zIndex: 999,
   },
-  dockBlur: {
+  liquidDock: {
     flexDirection: 'row',
-    width: 270,
-    height: 64,
-    borderRadius: 32,
+    width: 280,
+    height: 66,
+    borderRadius: 33,
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 22,
+    paddingHorizontal: 16,
     overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.5,
     shadowRadius: 24,
   },
-  dockItem: { padding: 10 },
+  glassDockSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  glassDockBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 33,
+    borderWidth: 1.2,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderTopColor: 'rgba(255, 255, 255, 0.55)', // خط براق شکست نور بالا
+  },
+  dockItem: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dockItemActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)', // کپسول روشن شیشه‌ای تب انتخاب‌شده
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+  },
 
   welcomeScreen: {
     ...StyleSheet.absoluteFillObject,
@@ -881,6 +940,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     shadowColor: '#FFF',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.25,
@@ -896,6 +956,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
@@ -903,8 +964,9 @@ const styles = StyleSheet.create({
   },
   welcomeBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700', marginRight: 8 },
 
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  modalContent: {
+  // ==================== شیت‌های شیشه‌ای پاپ‌آپ ====================
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
+  modalGlassCard: {
     height: '62%',
     width: '100%',
     borderTopLeftRadius: 36,
@@ -913,22 +975,33 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 32,
     overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  glassTopLip: {
+    ...StyleSheet.absoluteFillObject,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    borderWidth: 1.2,
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderTopColor: 'rgba(255,255,255,0.55)',
+    borderBottomWidth: 0,
   },
   modalDragHandle: { width: 36, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.3)', alignSelf: 'center', marginBottom: 20 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 },
   modalTitle: { fontSize: 22, fontWeight: '800', color: '#FFF' },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center' },
+  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 40 },
   emptyText: { marginTop: 14, fontSize: 15, color: 'rgba(255,255,255,0.35)', fontWeight: '600' },
   archiveItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(255,255,255,0.07)',
     padding: 12,
     borderRadius: 18,
     marginBottom: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderTopColor: 'rgba(255,255,255,0.25)',
   },
   archiveIconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,42,84,0.7)', justifyContent: 'center', alignItems: 'center' },
   archiveItemText: { flex: 1, marginHorizontal: 14, fontSize: 15, fontWeight: '600', color: '#FFF' },
@@ -937,12 +1010,13 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 18,
     paddingHorizontal: 14,
     marginBottom: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    borderTopColor: 'rgba(255,255,255,0.35)',
   },
   inputIcon: { marginRight: 8 },
   input: { flex: 1, paddingVertical: 16, fontSize: 17, fontWeight: '600', color: '#FFF', letterSpacing: 1.5 },
@@ -954,8 +1028,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: '#FFF',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
   },
   appleActionBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
 });
